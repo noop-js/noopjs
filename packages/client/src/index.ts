@@ -306,9 +306,15 @@ async function applyNavigation(nav: NavigationResponse, href: string, options?: 
   // Abort stale navigations BEFORE any side effects
   if (token && token !== navToken) return;
 
+  // Update history FIRST, before any async work. This ensures the history
+  // stack is correct even if the user presses back during the view transition.
+  // For popstate navigations (replace=true), the browser already updated the URL.
+  if (!options?.replace) {
+    saveScrollPosition();
+    window.history.pushState({}, '', href);
+  }
+
   const manifest = nav.state.nodeManifest || {};
-  // Skip View Transitions on popstate-driven navigations — the transition
-  // context can race with browser history updates and corrupt the DOM swap.
   if (document.startViewTransition && !options?.replace) {
     await document.startViewTransition(async () => {
       performDOMSwap(nav.html, manifest);
@@ -323,12 +329,6 @@ async function applyNavigation(nav: NavigationResponse, href: string, options?: 
   // fired during the animation, invalidating this navigation.
   if (token && token !== navToken) return;
 
-  // For browser back/forward (popstate), the browser already updated the URL.
-  // Only push a new history entry for programmatic (click) navigation.
-  if (!options?.replace) {
-    saveScrollPosition();
-    window.history.pushState({}, '', href);
-  }
   restoreScrollPosition(href);
   observeLinks();
 }
