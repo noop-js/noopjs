@@ -150,6 +150,33 @@ describe('compiler', () => {
     expect(result.code).not.toContain('customElements.define');
   });
 
+  it('parses client directive and attaches static property', () => {
+    const source = `
+      // client: resume
+      import { signal } from '@noopjs/signals';
+
+      export default function Counter() {
+        const count = signal(0);
+        return <button onClick={() => count.set(count.get() + 1)}>{count}</button>;
+      }
+    `;
+    const result = compile(source);
+    expect(result.clientLevel).toBe('resume');
+    expect(result.code).toContain('Counter.clientLevel');
+    expect(result.code).toContain("Counter.clientLevel = 'resume'");
+  });
+
+  it('defaults to no clientLevel without directive', () => {
+    const source = `
+      export default function Foo() {
+        return <div>hi</div>;
+      }
+    `;
+    const result = compile(source);
+    expect(result.clientLevel).toBeUndefined();
+    expect(result.code).not.toContain('.clientLevel');
+  });
+
   it('extracts handlers when extractHandlers is true', () => {
     const source = `
       import { signal } from '@noopjs/signals';

@@ -1,5 +1,6 @@
 import { createServer } from 'vite';
 import { noopVite } from '@noopjs/vite';
+import { type ClientLevel } from '@noopjs/server';
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -36,9 +37,12 @@ async function start() {
           // SSR render
           const { render } = await vite.ssrLoadModule('/src/entry-server.ts');
           const rendered = await render();
+          const clientLevel: ClientLevel = rendered.clientLevel;
           const stateScript = `<script id="__NOOP_STATE__" type="application/json">${JSON.stringify(rendered.state)}</script>`;
+          const clientScript = clientLevel === 'none' ? '' : '<script type="module" src="/src/main.ts"></script>';
           const html = template
             .replace('<!--ssr-content-->', rendered.html)
+            .replace('<!--client-script-->', clientScript)
             .replace('</body>', stateScript + '\n</body>');
           const csp = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'";
           res.writeHead(200, {

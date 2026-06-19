@@ -1,3 +1,4 @@
+// client: spa
 import { posts } from '../data';
 
 export const styles = {

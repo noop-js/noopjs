@@ -1,3 +1,4 @@
+// client: none
 const s = {
   container: { padding: '32px', fontFamily: 'sans-serif', maxWidth: '720px', margin: '0 auto' },
   nav: { marginBottom: '24px' },

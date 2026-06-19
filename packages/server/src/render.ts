@@ -1,10 +1,13 @@
 import { createSSRContext, enterSSR, exitSSR, getSerializedState } from './context';
 import type { SerializedState } from './context';
 
+export type ClientLevel = 'none' | 'resume' | 'spa' | 'full';
+
 export interface RenderResult {
   html: string;
   state: SerializedState;
   componentId: string;
+  clientLevel: ClientLevel;
 }
 
 /**
@@ -16,6 +19,7 @@ export interface RenderResult {
 export async function renderToString(
   componentFn: (...args: any[]) => any,
   props: Record<string, any> = {},
+  options?: { clientLevel?: ClientLevel },
 ): Promise<RenderResult> {
   const perf = typeof performance !== 'undefined' ? performance : null;
   perf?.mark('noop:ssr:start');
@@ -23,6 +27,9 @@ export async function renderToString(
   const componentId = 'c0';
   const ctx = createSSRContext(componentId);
   enterSSR(ctx);
+
+  // Read client level: explicit option > component static property > default
+  const clientLevel: ClientLevel = options?.clientLevel || (componentFn as any).clientLevel || 'spa';
 
   try {
     let rootNode = componentFn(props, componentId);
@@ -35,8 +42,9 @@ export async function renderToString(
         perf?.mark('noop:ssr:end');
         return {
           html: '',
-          state: { signals: {}, bindings: [], handlers: {}, rootId: componentId },
+          state: { signals: {}, bindings: [], handlers: {}, rootId: componentId, clientLevel },
           componentId,
+          clientLevel,
         };
       }
     }
@@ -62,23 +70,25 @@ export async function renderToString(
       const container = ctx.document.createElement('div');
       container.appendChild(rootNode);
       const html = container.toHTML();
-      const state = getSerializedState();
+      const rawState = getSerializedState();
+      const state = { ...rawState, clientLevel };
 
       perf?.mark('noop:ssr:serialize');
       perf?.measure('noop:ssr:total', 'noop:ssr:start', 'noop:ssr:serialize');
       perf?.measure('noop:ssr:render-duration', 'noop:ssr:render', 'noop:ssr:serialize');
 
-      return { html, state, componentId };
+      return { html, state, componentId, clientLevel };
     }
 
     perf?.mark('noop:ssr:end');
-    return { html: '', state: getSerializedState(), componentId };
+    return { html: '', state: { ...getSerializedState(), clientLevel }, componentId, clientLevel };
   } catch (err) {
     perf?.mark('noop:ssr:end');
     return {
       html: errorFallbackHtml(err),
-      state: { signals: {}, bindings: [], handlers: {}, rootId: componentId },
+      state: { signals: {}, bindings: [], handlers: {}, rootId: componentId, clientLevel },
       componentId,
+      clientLevel,
     };
   } finally {
     exitSSR();

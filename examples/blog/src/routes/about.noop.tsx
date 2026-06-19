@@ -1,3 +1,4 @@
+// client: none
 export const styles = {
   link: {
     color: '#4f46e5',

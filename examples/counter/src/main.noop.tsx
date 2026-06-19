@@ -1,3 +1,4 @@
+// client: resume
 import { signal } from '@noopjs/signals';
 
 export const styles = {

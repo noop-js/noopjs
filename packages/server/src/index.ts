@@ -6,7 +6,7 @@ export {
   prefetchLinkTags,
 } from './render';
 
-export type { RenderResult } from './render';
+export type { RenderResult, ClientLevel } from './render';
 
 export {
   createSSRContext,

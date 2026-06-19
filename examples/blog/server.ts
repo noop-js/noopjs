@@ -1,6 +1,6 @@
 import { createServer } from 'vite';
 import { noopVite } from '@noopjs/vite';
-import { extractPrefetchLinks } from '@noopjs/server';
+import { extractPrefetchLinks, type ClientLevel } from '@noopjs/server';
 import { createTailwindResolver } from '@noopjs/compiler';
 import tailwindcss from '@tailwindcss/vite';
 import { readFileSync } from 'fs';
@@ -61,17 +61,20 @@ async function start() {
       try {
         const { render } = await vite.ssrLoadModule('/src/entry-server.ts');
         const result = await render(routeName, params);
+        const clientLevel: ClientLevel = result.clientLevel;
         const escapedState = JSON.stringify(result.state)
           .replace(/</g, '\\u003C')
           .replace(/>/g, '\\u003E')
           .replace(/-->/g, '--\\>');
         const stateScript = `<script id="__NOOP_STATE__" type="application/json">${escapedState}</script>`;
+        const clientScript = clientLevel === 'none' ? '' : '<script type="module" src="/src/main.ts"></script>';
         const prefetchLinks = extractPrefetchLinks(result.html)
           .map(href => `<link rel="prefetch" href="${href}">`)
           .join('\n    ');
         const html = template
           .replace('<!--ssr-content-->', result.html)
           .replace('</head>', prefetchLinks ? `  ${prefetchLinks}\n  </head>` : '</head>')
+          .replace('<!--client-script-->', clientScript)
           .replace('</body>', stateScript + '\n</body>');
         const csp = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws: http://localhost:*";
         res.writeHead(200, {

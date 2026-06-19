@@ -27,6 +27,8 @@ export interface HandlerDescriptor {
   extracted: boolean;
 }
 
+export type ClientLevel = 'none' | 'resume' | 'spa' | 'full';
+
 export interface CompileResult {
   code: string;
   map?: any;
@@ -35,6 +37,7 @@ export interface CompileResult {
   customElementTag?: string;
   handlers?: HandlerDescriptor[];
   css?: string;
+  clientLevel?: ClientLevel;
 }
 
 export interface BindingDescriptor {
@@ -55,6 +58,7 @@ let compName: string;
 let compIdStr: string;
 let currentCompId: string;
 let customElementTag: string | null = null;
+let clientLevel: ClientLevel | null = null;
 let extractHandlersMode = false;
 let origParams: string | null = null;
 let sourceMapGen: SourceMapGenerator | null = null;
@@ -75,6 +79,7 @@ function reset(): void {
   compIdStr = '';
   currentCompId = '';
   customElementTag = null;
+  clientLevel = null;
   extractHandlersMode = false;
   origParams = null;
   sourceMapGen = null;
@@ -110,6 +115,12 @@ export function compile(source: string, options: CompileOptions = {}): CompileRe
   const directiveMatch = source.match(/@noopjs\s+customElement\s+['"]([^'"]+)['"]/);
   if (directiveMatch) {
     customElementTag = directiveMatch[1];
+  }
+
+  // Detect // client: directive
+  const clientLevelMatch = source.match(/\/\/\s*client:\s*(none|resume|spa|full)\b/);
+  if (clientLevelMatch) {
+    clientLevel = clientLevelMatch[1] as ClientLevel;
   }
 
   // First pass: collect info
@@ -230,6 +241,11 @@ export function compile(source: string, options: CompileOptions = {}): CompileRe
   for (const stmt of bodyStmts) out.push(stmt);
   out.push('}');
 
+  // Attach clientLevel as static property if directive was found
+  if (clientLevel) {
+    out.push(`${funcName}.clientLevel = '${clientLevel}';`);
+  }
+
   let code = out.join('\n');
 
   // If custom element directive was found, wrap with CE registration
@@ -322,6 +338,7 @@ if (!customElements.get('${customElementTag}')) {
     customElementTag: customElementTag || undefined,
     handlers: handlers.length > 0 ? handlers : undefined,
     css,
+    clientLevel: clientLevel || undefined,
   };
 }
 

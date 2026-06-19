@@ -22,6 +22,8 @@ export interface NodeManifestEntry {
   attrs: string[];
 }
 
+export type ClientLevel = 'none' | 'resume' | 'spa' | 'full';
+
 export interface SerializedState {
   signals: Record<string, any>;
   bindings: BindingRecord[];
@@ -29,6 +31,7 @@ export interface SerializedState {
   rootId: string;
   contextValues?: Record<string, any>;
   nodeManifest?: Record<number, NodeManifestEntry>;
+  clientLevel?: ClientLevel;
 }
 
 export interface SuspensePending {

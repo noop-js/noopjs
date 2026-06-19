@@ -1,5 +1,7 @@
 import { signal, effect } from '@noopjs/signals';
 
+type ClientLevel = 'none' | 'resume' | 'spa' | 'full';
+
 interface NodeManifestEntry {
   tag: string;
   attrs: string[];
@@ -12,6 +14,7 @@ interface SerializedState {
   rootId: string;
   contextValues?: Record<string, any>;
   nodeManifest?: Record<number, NodeManifestEntry>;
+  clientLevel?: ClientLevel;
 }
 
 interface BindingDescriptor {
@@ -43,8 +46,12 @@ export function init(): void {
 
   try {
     const state: SerializedState = JSON.parse(stateEl.textContent || '');
+    const level = state.clientLevel || 'spa';
+    if (level === 'none') return;
     initFromState(state);
-    startRouter();
+    if (level === 'spa' || level === 'full') {
+      startRouter();
+    }
   } catch (e) {
     console.error('[Noop] Failed to parse state:', e);
   }
@@ -352,6 +359,7 @@ function performDOMSwap(
 }
 
 window.addEventListener('popstate', () => {
+  if (!routerStarted) return;
   // Abort any in-flight click navigation — its pushState would fire after
   // the browser's history already moved, corrupting the history stack.
   navToken = null;

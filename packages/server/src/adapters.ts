@@ -1,4 +1,4 @@
-import { renderToString, prefetchLinkTags } from './render';
+import { renderToString, prefetchLinkTags, type ClientLevel } from './render';
 import type { IncomingMessage, ServerResponse } from 'http';
 
 export interface NoopRequest {
@@ -13,7 +13,12 @@ export interface NoopResponse {
   body: string;
 }
 
-function buildPage(result: { html: string; state: any }): string {
+function clientScriptTag(clientLevel: ClientLevel): string {
+  if (clientLevel === 'none') return '';
+  return '\n  <script type="module" src="/src/main.ts"></script>';
+}
+
+function buildPage(result: { html: string; state: any; clientLevel: ClientLevel }): string {
   const stateJson = JSON.stringify(result.state)
     .replace(/</g, '\\u003C')
     .replace(/>/g, '\\u003E')
@@ -27,8 +32,7 @@ function buildPage(result: { html: string; state: any }): string {
 </head>
 <body>
   <div id="root">${result.html}</div>
-  <script id="__NOOP_STATE__" type="application/json">${stateJson}</script>
-  <script type="module" src="/src/main.ts"></script>
+  <script id="__NOOP_STATE__" type="application/json">${stateJson}</script>${clientScriptTag(result.clientLevel)}
 </body>
 </html>`;
 }
@@ -85,8 +89,7 @@ export function createExpressMiddleware(
 </head>
 <body>
   <div id="root">${result.html}</div>
-  <script id="__NOOP_STATE__" type="application/json">${stateJson}</script>
-  <script type="module" src="/src/main.ts"></script>
+  <script id="__NOOP_STATE__" type="application/json">${stateJson}</script>${clientScriptTag(result.clientLevel)}
 </body>
 </html>`;
 

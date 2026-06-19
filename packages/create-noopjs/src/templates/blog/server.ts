@@ -1,6 +1,6 @@
 import { createServer } from 'vite';
 import { noopVite } from '@noopjs/vite';
-import { extractPrefetchLinks } from '@noopjs/server';
+import { extractPrefetchLinks, type ClientLevel } from '@noopjs/server';
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -42,15 +42,18 @@ async function start() {
       vite.middlewares.handle(req, res, async () => {
         const { render } = await vite.ssrLoadModule('/src/entry-server.ts');
         const result = await render(routeName, params);
+        const clientLevel: ClientLevel = result.clientLevel;
         const escaped = JSON.stringify(result.state)
           .replace(/</g, '\\u003C').replace(/>/g, '\\u003E').replace(/-->/g, '--\\>');
         const stateScript = `<script id="__NOOP_STATE__" type="application/json">${escaped}</script>`;
+        const clientScript = clientLevel === 'none' ? '' : '<script type="module" src="/src/main.ts"></script>';
         const prefetchLinks = extractPrefetchLinks(result.html)
           .map(href => `<link rel="prefetch" href="${href}">`)
           .join('\n    ');
         const html = template
           .replace('<!--ssr-content-->', result.html)
           .replace('</head>', prefetchLinks ? `  ${prefetchLinks}\n  </head>` : '</head>')
+          .replace('<!--client-script-->', clientScript)
           .replace('</body>', stateScript + '\n</body>');
         res.writeHead(200, { 'Content-Type': 'text/html' });
         res.end(html);
