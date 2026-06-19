@@ -43,6 +43,35 @@ function ensureNodeId(el: any): string {
   return id;
 }
 
+/** Walk parent childNodes and record text parts with signal placeholders.
+ *  The parts array has one MORE element than the number of signals.
+ *  Text = parts[0] + signal[0] + parts[1] + signal[1] + parts[2] + ...
+ *  Only set when parent has both static text and dynamic signal children
+ *  (childIndex >= 1 indicates at least one preceding static text node).
+ *  Returns undefined for pure-dynamic content (single text node, no template needed). */
+function recordTextParts(childNodes: any[], dynamicIndex: number): string[] | undefined {
+  if (childNodes.length <= 1) return undefined;
+  // Initialize parts with content before first dynamic node
+  let parts: string[] = [''];
+  for (let i = 0; i < childNodes.length; i++) {
+    if (i === dynamicIndex) {
+      // Signal placeholder: start a new segment after the signal
+      parts.push('');
+    } else if (childNodes[i].nodeType === 3) {
+      const v = childNodes[i].nodeValue || '';
+      // Append to the current (last) static segment
+      parts[parts.length - 1] += v;
+    }
+  }
+  // Trim trailing empty segment if it's the last one (nothing after signal)
+  if (parts.length > 1 && parts[parts.length - 1] === '' && parts.length > 2) {
+    parts.pop();
+  }
+  // If all static parts are empty, no template needed (pure dynamic)
+  if (parts.every(p => !p)) return undefined;
+  return parts;
+}
+
 export function bindText(
   node: Text | any,
   getter: () => string | number | boolean,
@@ -56,13 +85,16 @@ export function bindText(
       const parent = node.parentNode;
       if (parent && typeof parent.setAttribute === 'function') {
         const parentNodeId = ensureNodeId(parent);
-        const childIndex = Array.from(parent.childNodes).indexOf(node);
+        const childNodes = Array.from(parent.childNodes);
+        const childIndex = childNodes.indexOf(node);
+        const textParts = recordTextParts(childNodes, childIndex);
         ctx.bindings.push({
           nodeId: parentNodeId + '-t' + childIndex,
           type: 'text',
           signalRef,
           parentNodeId,
           childIndex,
+          ...(textParts ? { textParts } : {}),
         });
       }
     }
@@ -305,6 +337,12 @@ export function bindEvent(
         componentId: ctx.rootComponentId,
         handlerIndex: (ctx.handlerIndexCounter = (ctx.handlerIndexCounter || 0) + 1),
       };
+      // Store handler source code for inline bootstrap emission
+      if (typeof handler === 'function') {
+        const src = handler.toString();
+        if (!ctx.handlerSources) ctx.handlerSources = {};
+        ctx.handlerSources[handlerId] = src;
+      }
     }
     return;
   }

@@ -207,32 +207,53 @@ export function generatePageBootstrap(
   const handlers = state.handlers || {};
   const handlerKeys = Object.keys(handlers);
 
-  // Minimal signal/effect polyfill that matches @noopjs/signals API
-  const polyfill = `var __n=window.__noop=window.__noop||{};(function(){var _ae=null;__n.signal=function(v){var s=new Set;return{get(){if(_ae)s.add(_ae);return v},set(n){if(n!==v){v=n;for(var f of[...s])f()}}}};__n.effect=function(fn){var d=false,r=function(){if(d)return;_ae=r;try{fn()}finally{_ae=null}};r();var ed=function(){d=true};__n._trackEffect(ed);return ed};})();`;
+  // Minimal signal/effect polyfill — matches @noopjs/signals shape without full module.
+  // _trackEffect/_disposeEffects are no-ops; the full @noopjs/client module replaces
+  // them with real tracking when loaded on spa/full pages.
+  const polyfill = `var __n=window.__noop=window.__noop||{};(function(){var _ae=null;__n.signal=function(v){var s=new Set;return{get(){if(_ae)s.add(_ae);return v},set(n){if(n!==v){v=n;for(var f of[...s])f()}}}};__n._trackEffect=function(){};__n._disposeEffects=function(){};__n.effect=function(fn){var d=false,r=function(){if(d)return;_ae=r;try{fn()}finally{_ae=null}};r();var ed=function(){d=true};__n._trackEffect(ed);return ed};})();`;
 
   const lines: string[] = [];
   lines.push(`(function(s){`);
-  lines.push(`var _s={};`);
 
-  // Create signals
+  // Create signals with original variable names (derived from path: "c0.count" → "count")
+  // Handler code references these same variable names — they must match the compiled output
   for (const [path] of signalEntries) {
-    lines.push(`_s['${path}']=__n.signal(s.signals['${path}']);`);
+    const varName = path.split('.').slice(1).join('_') || path.replace(/[^a-zA-Z0-9_]/g, '_');
+    lines.push(`var ${varName}=__n.signal(s.signals['${path}']);`);
   }
 
   // Generate hardcoded binding effects
   for (const binding of bindings) {
-    const ref = `_s['${binding.signalRef}']`;
+    const sigPath = binding.signalRef;
+    const sigVar = sigPath.split('.').slice(1).join('_') || sigPath.replace(/[^a-zA-Z0-9_]/g, '_');
     if (binding.type === 'text') {
-      lines.push(`__n.effect(function(){var p=document.querySelector('[data-noop-node="${binding.parentNodeId}"]');if(p&&p.childNodes[${binding.childIndex}]!=null)p.childNodes[${binding.childIndex}].nodeValue=String(${ref}.get())});`);
+      if (binding.textParts) {
+        // SSR merged adjacent text nodes — use textParts to reconstruct full text
+        const parts = JSON.stringify(binding.textParts);
+        lines.push(`__n.effect(function(){var el=document.querySelector('[data-noop-node="${binding.parentNodeId}"]');if(el)el.textContent=${parts}[0]+String(${sigVar}.get())+${parts}[1]});`);
+      } else {
+        // Pure dynamic text — childIndex works because there's only one text node
+        lines.push(`__n.effect(function(){var p=document.querySelector('[data-noop-node="${binding.parentNodeId}"]');if(p&&p.childNodes[${binding.childIndex}]!=null)p.childNodes[${binding.childIndex}].nodeValue=String(${sigVar}.get())});`);
+      }
     } else if (binding.type === 'attribute') {
-      lines.push(`__n.effect(function(){var el=document.querySelector('[data-noop-node="${binding.nodeId}"]');if(el){var v=${ref}.get();if(v==null)el.removeAttribute('${binding.attributeName}');else el.setAttribute('${binding.attributeName}',String(v))}});`);
+      lines.push(`__n.effect(function(){var el=document.querySelector('[data-noop-node="${binding.nodeId}"]');if(el){var v=${sigVar}.get();if(v==null)el.removeAttribute('${binding.attributeName}');else el.setAttribute('${binding.attributeName}',String(v))}});`);
     }
   }
 
-  // Setup event handlers
+  // Setup event handlers — emit source inline instead of dynamic import
+  const handlerSources = state.handlerSources || {};
   for (const handlerId of handlerKeys) {
     const meta = handlers[handlerId];
-    lines.push(`(function(){var el=document.querySelector('[data-noop-ev="${handlerId}"]');if(el)el.addEventListener('${meta.eventType}',async function(e){try{var m=await import('/_noop/handler/${meta.componentId}/${handlerId}.js');if(typeof m.default==='function')m.default(e)}catch{}})}());`);
+    const source = handlerSources[handlerId];
+    if (source) {
+      // Emit handler code inline with signal-scoped variable names
+      // The handler source was captured by bindEvent during SSR via handler.toString()
+      // Signal variables use the same names as the compiled component (derived from path)
+      lines.push(`(function(){var el=document.querySelector('[data-noop-ev="${handlerId}"]');if(el)el.addEventListener('${meta.eventType}',${source})}());`);
+    } else {
+      // Fallback: dynamic import path for extracted handlers
+      lines.push(`(function(){var el=document.querySelector('[data-noop-ev="${handlerId}"]');if(el)el.addEventListener('${meta.eventType}',async function(e){try{var m=await import('/_noop/handler/${meta.componentId}/${handlerId}.js');if(typeof m.default==='function')m.default(e)}catch{}})}());`);
+    }
   }
 
   // Set flags for module script

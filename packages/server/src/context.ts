@@ -9,6 +9,9 @@ export interface BindingRecord {
   parentNodeId?: string;
   /** For text bindings: the child index within the parent */
   childIndex?: number;
+  /** For text bindings with mixed static+dynamic content: text parts array for full-text reconstruction.
+   *  Set during SSR when parent has multiple child nodes (e.g. "Count: {0}"). */
+  textParts?: string[];
 }
 
 export interface HandlerRecord {
@@ -28,6 +31,7 @@ export interface SerializedState {
   signals: Record<string, any>;
   bindings: BindingRecord[];
   handlers: Record<string, HandlerRecord>;
+  handlerSources?: Record<string, string>;
   rootId: string;
   contextValues?: Record<string, any>;
   nodeManifest?: Record<number, NodeManifestEntry>;
@@ -45,6 +49,7 @@ export interface SSRContext {
   signalPaths: Map<any, string>;
   bindings: BindingRecord[];
   handlers: Record<string, HandlerRecord>;
+  handlerSources: Record<string, string>;
   handlerIndexCounter: number;
   nodeIdCounter: number;
   rootComponentId: string;
@@ -89,6 +94,7 @@ export function createSSRContext(rootComponentId: string): SSRContext {
     signalPaths: new Map(),
     bindings: [],
     handlers: {},
+    handlerSources: {},
     handlerIndexCounter: 0,
     nodeIdCounter: 0,
     rootComponentId,
@@ -202,6 +208,7 @@ export function getSerializedState(): SerializedState {
     signals,
     bindings: ctx.bindings,
     handlers: ctx.handlers,
+    handlerSources: Object.keys(ctx.handlerSources).length > 0 ? ctx.handlerSources : undefined,
     rootId: ctx.rootComponentId,
     contextValues: Object.keys(contextValues).length > 0 ? contextValues : undefined,
     nodeManifest,

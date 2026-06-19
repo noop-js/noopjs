@@ -12,6 +12,11 @@ export interface BindingDescriptor {
   signalRef: string;
   parentNodeId?: string;
   childIndex?: number;
+  /** Parts of the parent's text content, with '{0}' placeholders for signal values.
+   *  Only set when parent has mixed static+dynamic content (childIndex >= 1).
+   *  Bootstrap uses this to reconstruct full text via string concatenation,
+   *  avoiding the SSR text-node merging issue. */
+  textParts?: string[];
 }
 
 export interface HandlerMeta {
