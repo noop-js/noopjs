@@ -297,7 +297,7 @@ The blog example demonstrates SSR + Tailwind v4 + NoopCSS + SPA navigation + laz
 
 NoopJS is open-source. Contributions of all kinds welcome — code, docs, bug reports, ideas.
 
-- [Open an issue](https://github.com/anomalyco/opencode/issues)
+- [Open an issue](https://github.com/noop-js/noopjs/issues)
 - Submit a PR
 - Improve the documentation in `docs/`
 - Build example projects
