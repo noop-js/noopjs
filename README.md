@@ -26,7 +26,7 @@
     ║                    ├── SSR:  HTML + Serialized State     ║
     ║                    │         │                           ║
     ║                    │         ▼                           ║
-    ║                    │    Client Resumer  ◄── 3.38 KB      ║
+    ║                    │    Client Resumer  ◄── 3.59 KB      ║
     ║                    │    (No hydration — just resume)     ║
     ║                    │                                     ║
     ║                    └── Atomic CSS  +  Tailwind v4        ║
@@ -44,7 +44,7 @@
 
 **The silos must break.** Components should work everywhere. NoopJS components compile to native Custom Elements on demand. Write once, embed anywhere.
 
-**JavaScript bundles must shrink.** The average React page ships ~45 KB of framework JS. NoopJS ships 0 KB for static pages. Interactive pages ship only the exact handler code, lazily loaded on first click. The resumer is 3.38 KB gzipped.
+**JavaScript bundles must shrink.** The average React page ships ~45 KB of framework JS. NoopJS ships 0 KB for static pages. Interactive pages ship only the exact handler code, lazily loaded on first click. The resumer is 3.59 KB gzipped.
 
 ---
 
@@ -70,7 +70,7 @@ export default defineConfig({
 | **Signals** | TC39-standard `signal`, `computed`, `effect`, `batch`. |
 | **Atomic CSS** | Style objects → hashed utility classes. Zero runtime CSS-in-JS. |
 | **SSR engine** | Render to HTML, serialize state, resume on client. True resumability. |
-| **Client resumer** | ~3.38 KB gzipped. Re-attaches signals to DOM without re-running components. |
+| **Client resumer** | ~3.59 KB gzipped. Re-attaches signals to DOM without re-running components. |
 | **SPA router** | Intercepts `<a>` clicks. View Transitions API. Auto-prefetching. |
 | **Event delegation** | Single global listener. Handlers loaded lazily on first interaction. |
 | **SPA security** | mXSS-immune page swaps via per-render sentinel manifest. ~50 bytes. No DOMPurify. |

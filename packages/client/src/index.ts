@@ -303,6 +303,9 @@ export async function navigate(href: string, options?: { replace?: boolean }): P
 }
 
 async function applyNavigation(nav: NavigationResponse, href: string, options?: { replace?: boolean }, token?: object): Promise<void> {
+  // Abort stale navigations BEFORE any side effects
+  if (token && token !== navToken) return;
+
   const manifest = nav.state.nodeManifest || {};
   // Skip View Transitions on popstate-driven navigations — the transition
   // context can race with browser history updates and corrupt the DOM swap.
@@ -315,9 +318,9 @@ async function applyNavigation(nav: NavigationResponse, href: string, options?: 
   }
 
   applyState(nav.state);
-  // If a newer navigation has started (e.g., user pressed back during a view
-  // transition), this navigation is stale — don't push its URL to history,
-  // as that would corrupt the browser's history stack.
+
+  // Re-check token after the async view transition — popstate may have
+  // fired during the animation, invalidating this navigation.
   if (token && token !== navToken) return;
 
   // For browser back/forward (popstate), the browser already updated the URL.
@@ -408,6 +411,7 @@ window.addEventListener('popstate', () => {
   // Abort any in-flight click navigation — its pushState would fire after
   // the browser's history already moved, corrupting the history stack.
   navToken = null;
+  navigationInProgress = false;
   navigate(window.location.pathname + window.location.search, { replace: true });
 });
 
