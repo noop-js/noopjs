@@ -29,64 +29,13 @@ interface HandlerMeta {
   handlerIndex: number;
 }
 
-interface NavigationResponse {
-  html: string;
-  state: SerializedState;
-}
-
 let signalRegistry = new Map<string, ReturnType<typeof signal>>();
 let effectDisposers: (() => void)[] = [];
 let routerStarted = false;
 let navigationInProgress = false;
 let navToken: object | null = null;
 
-// ── Prefetch Cache ──────────────────────────────────────────
-
-let prefetchCache = new Map<string, NavigationResponse>();
-let prefetchObserver: IntersectionObserver | null = null;
-
-export function resetPrefetchCache(): void {
-  prefetchCache.clear();
-}
-
-export function prefetchUrl(url: string): void {
-  if (prefetchCache.has(url)) return;
-  const absUrl = new URL(url, window.location.origin);
-  if (absUrl.origin !== window.location.origin) return;
-  fetch(absUrl.pathname + absUrl.search, {
-    headers: { 'X-Noop-Navigate': '1' },
-  })
-    .then(r => r.ok ? r.json() : null)
-    .then((nav: NavigationResponse | null) => {
-      if (nav) prefetchCache.set(url, nav);
-    })
-    .catch(() => {});
-}
-
-function observeLinks(): void {
-  if (typeof IntersectionObserver === 'undefined') return;
-  if (prefetchObserver) prefetchObserver.disconnect();
-
-  prefetchObserver = new IntersectionObserver((entries) => {
-    for (const entry of entries) {
-      if (entry.isIntersecting) {
-        const link = entry.target as HTMLAnchorElement;
-        const href = link.getAttribute('href');
-        if (href && !href.startsWith('#') && !href.startsWith('http')) {
-          prefetchUrl(href);
-        }
-        prefetchObserver!.unobserve(link);
-      }
-    }
-  }, { rootMargin: '200px' });
-
-  document.querySelectorAll('a[href]').forEach(link => {
-    const href = link.getAttribute('href');
-    if (!href || href.startsWith('#') || href.startsWith('http')) return;
-    prefetchObserver!.observe(link);
-    link.addEventListener('mouseenter', () => prefetchUrl(href), { once: true });
-  });
-}
+const emptyState: SerializedState = { signals: {}, bindings: [], handlers: {}, rootId: '' };
 
 export function init(): void {
   const stateEl = document.getElementById('__NOOP_STATE__');
@@ -256,8 +205,6 @@ function startRouter(): void {
     saveScrollPosition();
     navigate(href).catch(console.error);
   });
-
-  observeLinks();
 }
 
 function findAnchor(el: HTMLElement | null): HTMLAnchorElement | null {
@@ -277,24 +224,22 @@ export async function navigate(href: string, options?: { replace?: boolean }): P
   navToken = token;
   navigationInProgress = true;
   try {
-    const cached = prefetchCache.get(href);
-    if (cached) {
-      prefetchCache.delete(href);
-      await applyNavigation(cached, href, options, token);
-      return;
-    }
-
-    const response = await fetch(url.pathname + url.search, {
-      headers: { 'X-Noop-Navigate': '1' },
-    });
+    const response = await fetch(url.pathname + url.search);
 
     if (!response.ok) {
       try { window.location.href = href; } catch {}
       return;
     }
 
-    const nav: NavigationResponse = await response.json();
-    await applyNavigation(nav, href, options, token);
+    const html = await response.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const rootEl = doc.querySelector('main') || doc.getElementById('root');
+    const rootContent = rootEl?.innerHTML ?? '';
+    const stateEl = doc.getElementById('__NOOP_STATE__');
+    const state: SerializedState = stateEl ? JSON.parse(stateEl.textContent || '{}') : emptyState;
+
+    await applyNavigation(rootContent, state, href, options, token);
   } catch {
     try { window.location.href = href; } catch {}
   } finally {
@@ -302,7 +247,7 @@ export async function navigate(href: string, options?: { replace?: boolean }): P
   }
 }
 
-async function applyNavigation(nav: NavigationResponse, href: string, options?: { replace?: boolean }, token?: object): Promise<void> {
+async function applyNavigation(html: string, state: SerializedState, href: string, options?: { replace?: boolean }, token?: object): Promise<void> {
   // Abort stale navigations BEFORE any side effects
   if (token && token !== navToken) return;
 
@@ -314,23 +259,22 @@ async function applyNavigation(nav: NavigationResponse, href: string, options?: 
     window.history.pushState({}, '', href);
   }
 
-  const manifest = nav.state.nodeManifest || {};
+  const manifest = state.nodeManifest || {};
   if (document.startViewTransition && !options?.replace) {
     await document.startViewTransition(async () => {
-      performDOMSwap(nav.html, manifest);
+      performDOMSwap(html, manifest);
     }).finished;
   } else {
-    performDOMSwap(nav.html, manifest);
+    performDOMSwap(html, manifest);
   }
 
-  applyState(nav.state);
+  applyState(state);
 
   // Re-check token after the async view transition — popstate may have
   // fired during the animation, invalidating this navigation.
   if (token && token !== navToken) return;
 
   restoreScrollPosition(href);
-  observeLinks();
 }
 
 function verifyAndClean(

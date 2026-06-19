@@ -1,4 +1,4 @@
-import { renderToString } from './render';
+import { renderToString, prefetchLinkTags } from './render';
 import type { IncomingMessage, ServerResponse } from 'http';
 
 export interface NoopRequest {
@@ -18,11 +18,12 @@ function buildPage(result: { html: string; state: any }): string {
     .replace(/</g, '\\u003C')
     .replace(/>/g, '\\u003E')
     .replace(/-->/g, '--\\>');
+  const prefetchTags = prefetchLinkTags(result.html);
   return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1">${prefetchTags}
 </head>
 <body>
   <div id="root">${result.html}</div>
@@ -74,12 +75,13 @@ export function createExpressMiddleware(
         .replace(/</g, '\\u003C')
         .replace(/>/g, '\\u003E')
         .replace(/-->/g, '--\\>');
+      const prefetchTags = prefetchLinkTags(result.html);
 
       const html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1">${prefetchTags}
 </head>
 <body>
   <div id="root">${result.html}</div>

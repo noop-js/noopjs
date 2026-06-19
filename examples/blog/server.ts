@@ -1,5 +1,6 @@
 import { createServer } from 'vite';
 import { noopVite } from '@noopjs/vite';
+import { extractPrefetchLinks } from '@noopjs/server';
 import { createTailwindResolver } from '@noopjs/compiler';
 import tailwindcss from '@tailwindcss/vite';
 import { readFileSync } from 'fs';
@@ -59,32 +60,25 @@ async function start() {
 
       try {
         const { render } = await vite.ssrLoadModule('/src/entry-server.ts');
-        const isNav = req.headers['x-noop-navigate'] === '1';
-
-        if (isNav) {
-          const result = await render(routeName, params);
-          res.writeHead(200, {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-          });
-          res.end(JSON.stringify({ html: result.html, state: result.state }));
-        } else {
-          const result = await render(routeName, params);
-          const escapedState = JSON.stringify(result.state)
-            .replace(/</g, '\\u003C')
-            .replace(/>/g, '\\u003E')
-            .replace(/-->/g, '--\\>');
-          const stateScript = `<script id="__NOOP_STATE__" type="application/json">${escapedState}</script>`;
-          const html = template
-            .replace('<!--ssr-content-->', result.html)
-            .replace('</body>', stateScript + '\n</body>');
-          const csp = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws: http://localhost:*";
-          res.writeHead(200, {
-            'Content-Type': 'text/html',
-            'Content-Security-Policy': csp,
-          });
-          res.end(html);
-        }
+        const result = await render(routeName, params);
+        const escapedState = JSON.stringify(result.state)
+          .replace(/</g, '\\u003C')
+          .replace(/>/g, '\\u003E')
+          .replace(/-->/g, '--\\>');
+        const stateScript = `<script id="__NOOP_STATE__" type="application/json">${escapedState}</script>`;
+        const prefetchLinks = extractPrefetchLinks(result.html)
+          .map(href => `<link rel="prefetch" href="${href}">`)
+          .join('\n    ');
+        const html = template
+          .replace('<!--ssr-content-->', result.html)
+          .replace('</head>', prefetchLinks ? `  ${prefetchLinks}\n  </head>` : '</head>')
+          .replace('</body>', stateScript + '\n</body>');
+        const csp = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws: http://localhost:*";
+        res.writeHead(200, {
+          'Content-Type': 'text/html',
+          'Content-Security-Policy': csp,
+        });
+        res.end(html);
       } catch (err) {
         console.error('SSR error:', err);
         res.writeHead(500, { 'Content-Type': 'text/html' });

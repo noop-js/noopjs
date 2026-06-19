@@ -214,16 +214,14 @@
 - [ ] **Test:** handler code loads and executes on interaction
 - [ ] **Test:** handler chunk is not loaded on initial page load
 
-### Navigation Prefetching
-- [X] Prefetch visible links via IntersectionObserver (200px rootMargin)
-- [X] Hover-based prefetch via mouseenter listener
-- [X] Prefetch cache consulted in `navigate()` before network fetch
-- [X] `resetPrefetchCache()` + `prefetchUrl()` exported for programmatic use
-- [X] Cache entry consumed on first navigation (single-use)
-- [X] **Test:** prefetched navigation returns instantly without network request
-- [X] **Test:** duplicate prefetch URLs are deduplicated
-- [X] **Test:** prefetch does not fetch external URLs
-- [X] **Test:** cache consumed on navigation, re-fetches on second nav
+### Navigation Prefetching — Replaced with Native `<link rel="prefetch">`
+- [X] Removed JS prefetcher (IntersectionObserver, mouseenter, prefetchCache, prefetchUrl, resetPrefetchCache)
+- [X] SSR emits `<link rel="prefetch">` for each internal `<a href>` in rendered content
+- [X] Browser handles prefetching natively — zero JS, zero custom cache
+- [X] SPA router now fetches full HTML pages instead of JSON — URLs match prefetch URLs exactly
+- [X] Server always returns full HTML (no `X-Noop-Navigate` JSON endpoint needed)
+- [X] Client parses full HTML with DOMParser to extract root content + serialized state
+- [X] Client runtime reduced from ~3.56 KB to ~3 KB gzipped (prefetcher removed)
 
 ### Two Parallel Signal Trees (Fix)
 - [X] Client resumer restores signal values from SSR serialized state

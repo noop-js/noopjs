@@ -26,19 +26,18 @@ test.describe('Noop Blog SSR + Client Navigation', () => {
     await expect(page.locator('text=2026-01-15')).toBeVisible();
   });
 
-  test('navigation response returns JSON with html and state', async ({ page }) => {
+  test('navigation fetches full HTML and client extracts root content', async ({ page }) => {
     await page.goto('/');
 
     const response = await page.evaluate(async () => {
-      const res = await fetch('/about', {
-        headers: { 'X-Noop-Navigate': '1' },
-      });
-      return res.json();
+      const res = await fetch('/about');
+      const html = await res.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      return doc.getElementById('root')?.innerHTML ?? '';
     });
 
-    expect(response).toHaveProperty('html');
-    expect(response).toHaveProperty('state');
-    expect(response.html).toContain('About This Blog');
+    expect(response).toContain('About This Blog');
   });
 
   test('Tailwind utility classes are applied on blog pages', async ({ page }) => {
@@ -162,20 +161,18 @@ test.describe('Noop Blog SSR + Client Navigation', () => {
 });
 
 test.describe('Noop Blog Performance', () => {
-  test('navigation response is fast', async ({ page }) => {
+  test('full page fetch is fast', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
     const start = Date.now();
     const response = await page.evaluate(async () => {
-      const res = await fetch('/about', {
-        headers: { 'X-Noop-Navigate': '1' },
-      });
-      return res.json();
+      const res = await fetch('/about');
+      return res.text();
     });
     const elapsed = Date.now() - start;
 
-    expect(response).toHaveProperty('html');
+    expect(response).toContain('About This Blog');
     expect(elapsed).toBeLessThan(2000); // generous threshold
   });
 });

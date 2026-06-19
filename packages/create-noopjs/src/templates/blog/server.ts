@@ -1,5 +1,6 @@
 import { createServer } from 'vite';
 import { noopVite } from '@noopjs/vite';
+import { extractPrefetchLinks } from '@noopjs/server';
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -40,23 +41,19 @@ async function start() {
     try {
       vite.middlewares.handle(req, res, async () => {
         const { render } = await vite.ssrLoadModule('/src/entry-server.ts');
-        const isNav = req.headers['x-noop-navigate'] === '1';
-
-        if (isNav) {
-          const result = await render(routeName, params);
-          res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
-          res.end(JSON.stringify({ html: result.html, state: result.state }));
-        } else {
-          const result = await render(routeName, params);
-          const escaped = JSON.stringify(result.state)
-            .replace(/</g, '\\u003C').replace(/>/g, '\\u003E').replace(/-->/g, '--\\>');
-          const stateScript = `<script id="__NOOP_STATE__" type="application/json">${escaped}</script>`;
-          const html = template
-            .replace('<!--ssr-content-->', result.html)
-            .replace('</body>', stateScript + '\n</body>');
-          res.writeHead(200, { 'Content-Type': 'text/html' });
-          res.end(html);
-        }
+        const result = await render(routeName, params);
+        const escaped = JSON.stringify(result.state)
+          .replace(/</g, '\\u003C').replace(/>/g, '\\u003E').replace(/-->/g, '--\\>');
+        const stateScript = `<script id="__NOOP_STATE__" type="application/json">${escaped}</script>`;
+        const prefetchLinks = extractPrefetchLinks(result.html)
+          .map(href => `<link rel="prefetch" href="${href}">`)
+          .join('\n    ');
+        const html = template
+          .replace('<!--ssr-content-->', result.html)
+          .replace('</head>', prefetchLinks ? `  ${prefetchLinks}\n  </head>` : '</head>')
+          .replace('</body>', stateScript + '\n</body>');
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(html);
       });
     } catch (err) {
       console.error(err);

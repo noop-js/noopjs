@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/LCP-0.06s-brightgreen" alt="LCP 0.06s" />
   <img src="https://img.shields.io/badge/CLS-0-brightgreen" alt="CLS 0" />
   <img src="https://img.shields.io/badge/INP-40ms-brightgreen" alt="INP 40ms" />
-  <img src="https://img.shields.io/badge/Client_runtime-3.56_KB_(gzipped)-blue" alt="3.56 KB gzipped client runtime" />
+  <img src="https://img.shields.io/badge/Client_runtime-3.06_KB_(gzipped)-blue" alt="3.06 KB gzipped client runtime" />
   <img src="https://img.shields.io/badge/version-1.1.0-blue" alt="Version 1.1.0" />
   <img src="https://img.shields.io/badge/mXSS-immune-brightgreen" alt="mXSS Immune" />
   <img src="https://img.shields.io/badge/license-ISC-blue" alt="ISC License" />
@@ -26,7 +26,7 @@
     ║                    ├── SSR:  HTML + Serialized State     ║
     ║                    │         │                           ║
     ║                    │         ▼                           ║
-    ║                    │    Client Runtime  ◄── 3.56 KB      ║
+    ║                    │    Client Runtime  ◄── 3.06 KB      ║
     ║                    │    (No hydration — just resume)     ║
     ║                    │                                     ║
     ║                    └── Atomic CSS  +  Tailwind v4        ║
@@ -44,7 +44,7 @@
 
 **The silos must break.** Components should work everywhere. NoopJS components compile to native Custom Elements on demand. Write once, embed anywhere.
 
-**JavaScript bundles must shrink.** The average React page ships ~45 KB of framework JS. NoopJS ships 0 KB for static pages. Interactive pages ship only the exact handler code, lazily loaded on first click, plus a 3.56 KB gzipped client runtime (resumer + SPA router + sentinel verifier).
+**JavaScript bundles must shrink.** The average React page ships ~45 KB of framework JS. NoopJS ships 0 KB for static pages. Interactive pages ship only the exact handler code, lazily loaded on first click, plus a ~3 KB gzipped client runtime (resumer + SPA router + sentinel verifier).
 
 ---
 
@@ -70,8 +70,8 @@ export default defineConfig({
 | **Signals** | TC39-standard `signal`, `computed`, `effect`, `batch`. |
 | **Atomic CSS** | Style objects → hashed utility classes. Zero runtime CSS-in-JS. |
 | **SSR engine** | Render to HTML, serialize state, resume on client. True resumability. |
-| **Client runtime** | 3.56 KB gzipped (resumer + router + prefetcher + sentinel verifier). Re-attaches signals to DOM without re-running components. |
-| **SPA router** | Intercepts `<a>` clicks. View Transitions API. Auto-prefetching. |
+| **Client runtime** | ~3 KB gzipped (resumer + router + sentinel verifier). Re-attaches signals to DOM without re-running components. Native `<link rel="prefetch">` eliminates JS prefetcher. |
+| **SPA router** | Intercepts `<a>` clicks. View Transitions API. Native `<link rel="prefetch">`. |
 | **Event delegation** | Single global listener. Handlers loaded lazily on first interaction. |
 | **SPA security** | mXSS-immune page swaps via per-render sentinel manifest. ~50 bytes. No DOMPurify. |
 | **Tailwind v4** | First-class token resolver. `token.spacing[6]` → `p-6`. |
@@ -239,7 +239,7 @@ If the element lacks a `data-n` matching the manifest, it's removed. If its tag 
 | `@noopjs/signals` | 1.1.0 | TC39 Signals — `signal`, `computed`, `effect`, `batch`, `untrack`, `readonly` |
 | `@noopjs/compiler` | 1.1.0 | Compiles `.noop.tsx` to vanilla JS. Exports `createTailwindResolver`. |
 | `@noopjs/runtime` | 1.1.0 | Browser runtime — `bindText`, `bindEvent`, `bindStyle`, `onMount`, Context, Portals, Suspense |
-| `@noopjs/client` | 1.1.0 | Client resumer — SSR hydration, SPA router, prefetching |
+| `@noopjs/client` | 1.1.0 | Client resumer — SSR hydration, SPA router, native prefetch |
 | `@noopjs/server` | 1.1.0 | SSR engine — `renderToString`, `renderToStream`, file-based routing, caching |
 | `@noopjs/vite` | 1.1.0 | Vite plugin — compiles `.noop.tsx`, extracts CSS, HMR, handler splitting |
 | `@noopjs/css` | 1.1.0 | Atomic CSS extractor — `extractStyles()` converts style objects to atomic classes |
@@ -313,6 +313,6 @@ NoopJS is built on a simple philosophy: the web doesn't need another framework. 
 ---
 
 <p align="center">
-  <strong>LCP 0.06s · CLS 0 · INP 40ms · 0 KB JS on static · 3.56 KB runtime on interactive</strong><br>
+  <strong>LCP 0.06s · CLS 0 · INP 40ms · 0 KB JS on static · ~3 KB runtime on interactive</strong><br>
   <em>v1.1.0</em>
 </p>

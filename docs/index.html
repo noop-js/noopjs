@@ -964,21 +964,26 @@ app.get('/*', async (req, res) => {
 
       <h3>Client-Side Navigation</h3>
       <p>
-        <code>@noopjs/client</code> intercepts <code>&lt;a&gt;</code> clicks, fetches JSON from the server
-        (with <code>X-Noop-Navigate: 1</code> header), and swaps the DOM using
-        <code>document.startViewTransition</code> when available.
+        <code>@noopjs/client</code> intercepts <code>&lt;a&gt;</code> clicks, fetches the full HTML page,
+        parses it with <code>DOMParser</code>, and swaps the DOM using
+        <code>document.startViewTransition</code> when available. Because the server always returns
+        full HTML, pages are prefetched natively via <code>&lt;link rel="prefetch"&gt;</code> — no
+        custom header or JS prefetcher needed.
       </p>
       <pre><code>// Manual navigation (e.g., from a button)
 import { navigate } from '@noopjs/client';
 
-navigate('/about');  // fetches, swaps DOM, pushes history</code></pre>
+navigate('/about');  // fetches full HTML, swaps DOM, pushes history</code></pre>
 
       <h3>Prefetching</h3>
-      <p>Links within viewport are automatically prefetched via <code>prefetchUrl</code>:</p>
-      <pre><code>import { prefetchUrl, resetPrefetchCache } from '@noopjs/client';
-
-// Prefetch a page manually
-prefetchUrl('/blog/hello-noop');</code></pre>
+      <p>
+        The SSR engine emits <code>&lt;link rel="prefetch"&gt;</code> for each internal link found in
+        the rendered content. The browser handles prefetching natively — zero JavaScript, zero
+        IntersectionObserver boilerplate.
+      </p>
+      <pre><code>&lt;!-- Automatically emitted in &lt;head&gt; --&gt;
+&lt;link rel="prefetch" href="/about"&gt;
+&lt;link rel="prefetch" href="/blog/hello-noop"&gt;</code></pre>
     </section>
 
     <section id="ssr-streaming">
@@ -1157,9 +1162,7 @@ npx @noopjs/create-noopjs</code></pre>
         <tr><td><code>init()</code></td><td>Auto-invoked on DOMContentLoaded, hydrates from state</td></tr>
         <tr><td><code>initFromState(state)</code></td><td>Programmatic hydration from serialized state</td></tr>
         <tr><td><code>applyState(newState)</code></td><td>Replace state (for SPA navigation)</td></tr>
-        <tr><td><code>navigate(href)</code></td><td>Client-side navigation</td></tr>
-        <tr><td><code>prefetchUrl(url)</code></td><td>Prefetch a page</td></tr>
-        <tr><td><code>resetPrefetchCache()</code></td><td>Clear prefetch cache</td></tr>
+        <tr><td><code>navigate(href)</code></td><td>Client-side navigation (fetches full HTML, parses with DOMParser)</td></tr>
       </table>
 
       <h3><code>@noopjs/server</code></h3>
@@ -1172,6 +1175,8 @@ npx @noopjs/create-noopjs</code></pre>
         <tr><td><code>buildRoutes(routesDir)</code></td><td>Build route table from convention</td></tr>
         <tr><td><code>matchRoute(url, routes)</code></td><td>Match URL to route</td></tr>
         <tr><td><code>cacheRender(options, fn)</code></td><td>Cache SSR results</td></tr>
+        <tr><td><code>extractPrefetchLinks(html)</code></td><td>Extract internal hrefs from rendered HTML</td></tr>
+        <tr><td><code>prefetchLinkTags(html)</code></td><td>Generate <code>&lt;link rel="prefetch"&gt;</code> tags from rendered HTML</td></tr>
       </table>
 
       <h3><code>@noopjs/vite</code></h3>

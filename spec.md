@@ -403,21 +403,19 @@ Thus, Phase 2 requires modifying the compiler to emit binding descriptors instea
 - The resumer (or a small router script included) attaches click listeners on all `<a>` elements that have same-origin hrefs (or internal links).
 - On click, prevent default, call `router.navigate(href)`.
 - Navigation flow:
-  1. `fetch(href, { headers: { 'X-Noop-Navigate': '1' } })` – the server responds with a JSON payload containing:
-     - `html`: string of the new page's inner HTML (body content).
-     - `state`: updated serialized state for the new page's components (signals, bindings).
-     - `handlers`: handler map for the new page.
-  2. Wrap DOM swap in `document.startViewTransition(async () => { ... })`:
+  1. `fetch(href)` – fetches the full HTML page (no custom header). The browser's HTTP cache serves prefetched responses from `<link rel="prefetch">`.
+  2. Parse the response HTML with `DOMParser` and extract `#root` innerHTML and `#__NOOP_STATE__` state script.
+  3. Wrap DOM swap in `document.startViewTransition(async () => { ... })`:
      - Parse the new HTML into a temporary container.
      - Replace the content of the current page's root layout slot (e.g., `<main>`) with the new HTML.
-     - Load the new resumability state: call `__NOOP_applyState(newState)` to update signal registry and re-create bindings (while disposing old effects). The resumer should support hot-swapping state for a sub-tree.
-  3. The browser handles the transition animation.
+     - Load the new resumability state: call `applyState(newState)` to update signal registry and re-create bindings (while disposing old effects).
+  4. The browser handles the transition animation.
 - This provides seamless page transitions.
 
 **Server Implementation:**
-- The server package will include a production-ready Node server (or adapter for Bun/Deno).
-- On request with `X-Noop-Navigate`, respond with JSON instead of full HTML.
-- Full HTML page on initial load includes resumer script and router bootstrap.
+- The server always returns full HTML pages (no JSON endpoint).
+- The client SPA router fetches full HTML pages and parses them with `DOMParser` to extract root content and serialized state.
+- Native `<link rel="prefetch">` tags are emitted in `<head>` for each internal `<a href>` found in the rendered content, eliminating the need for a JS-based prefetcher.
 
 **Test Plan for Phase 4:**
 - E2E: Create a two-page site (`/` and `/about`). Navigate from home to about via link. Assert that URL updates, the page content changes, and a View Transition runs (can check with Playwright's `page.waitForEvent('animation')` or view transition mock).

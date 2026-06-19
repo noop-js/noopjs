@@ -202,3 +202,22 @@ function errorFallbackHtml(err: unknown): string {
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
+
+export function extractPrefetchLinks(html: string): string[] {
+  const links: string[] = [];
+  const regex = /<a\s[^>]*href="([^"]+)"/gi;
+  let match;
+  while ((match = regex.exec(html)) !== null) {
+    const href = match[1];
+    if (href.startsWith('/')) {
+      links.push(href);
+    }
+  }
+  return [...new Set(links)];
+}
+
+export function prefetchLinkTags(html: string): string {
+  const links = extractPrefetchLinks(html);
+  if (links.length === 0) return '';
+  return '\n  ' + links.map(href => `<link rel="prefetch" href="${href}">`).join('\n  ');
+}
