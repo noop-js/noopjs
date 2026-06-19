@@ -50,7 +50,7 @@
 ## What's in the Box
 
 ```bash
-npm install @noopjs/vite
+npm install @noopjs/vite        # or scaffold: npm create noopjs
 ```
 
 Then add one plugin to `vite.config.ts`:
@@ -82,14 +82,14 @@ export default defineConfig({
 ## Quick Start
 
 ```bash
-npm create @noopjs
+npm create noopjs               # any tool: pnpm create, yarn create, bun create
 # Pick a template: counter, blog, or empty
 ```
 
 Or add to any existing Vite project:
 
 ```bash
-npm install @noopjs/vite
+npm install @noopjs/vite        # or: pnpm add, yarn add, bun add
 ```
 
 ```ts
@@ -222,15 +222,15 @@ Resolves to `p-6`, `text-blue-500` at compile time. Both systems coexist on the 
 
 | Package | Version | Description |
 |---|---|---|
-| `@noopjs/signals` | 0.5.0 | TC39 Signals — `signal`, `computed`, `effect`, `batch`, `untrack`, `readonly` |
-| `@noopjs/compiler` | 0.5.0 | Compiles `.noop.tsx` to vanilla JS. Exports `createTailwindResolver`. |
-| `@noopjs/runtime` | 0.5.0 | Browser runtime — `bindText`, `bindEvent`, `bindStyle`, `onMount`, Context, Portals, Suspense |
-| `@noopjs/client` | 0.5.0 | Client resumer — SSR hydration, SPA router, prefetching |
-| `@noopjs/server` | 0.5.0 | SSR engine — `renderToString`, `renderToStream`, file-based routing, caching |
-| `@noopjs/vite` | 0.5.0 | Vite plugin — compiles `.noop.tsx`, extracts CSS, HMR, handler splitting |
-| `@noopjs/css` | 0.5.0 | Atomic CSS extractor — `extractStyles()` converts style objects to atomic classes |
-| `@noopjs/cli` | 0.5.0 | CLI — `dev`, `build`, `generate`, `analyze`, `check`, `init` |
-| `@noopjs/create-noopjs` | 0.5.0 | `npm create @noopjs` — project scaffolding with templates |
+| `@noopjs/signals` | 1.0.0 | TC39 Signals — `signal`, `computed`, `effect`, `batch`, `untrack`, `readonly` |
+| `@noopjs/compiler` | 1.0.0 | Compiles `.noop.tsx` to vanilla JS. Exports `createTailwindResolver`. |
+| `@noopjs/runtime` | 1.0.0 | Browser runtime — `bindText`, `bindEvent`, `bindStyle`, `onMount`, Context, Portals, Suspense |
+| `@noopjs/client` | 1.0.0 | Client resumer — SSR hydration, SPA router, prefetching |
+| `@noopjs/server` | 1.0.0 | SSR engine — `renderToString`, `renderToStream`, file-based routing, caching |
+| `@noopjs/vite` | 1.0.0 | Vite plugin — compiles `.noop.tsx`, extracts CSS, HMR, handler splitting |
+| `@noopjs/css` | 1.0.0 | Atomic CSS extractor — `extractStyles()` converts style objects to atomic classes |
+| `@noopjs/cli` | 1.0.0 | CLI — `dev`, `build`, `generate`, `analyze`, `check`, `init` |
+| `create-noopjs` | 1.0.0 | `npm create noopjs` — project scaffolding with templates |
 
 ---
 
