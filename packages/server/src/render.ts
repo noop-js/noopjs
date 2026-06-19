@@ -10,12 +10,6 @@ export interface RenderResult {
   clientLevel: ClientLevel;
 }
 
-/**
- * Render a NoopJS component to HTML with serialized state.
- * Wrapped in error boundary — if the component throws, returns fallback HTML.
- * Supports async components (Suspense with async children).
- * Records performance marks when globalThis.performance is available.
- */
 export async function renderToString(
   componentFn: (...args: any[]) => any,
   props: Record<string, any> = {},
@@ -28,13 +22,11 @@ export async function renderToString(
   const ctx = createSSRContext(componentId);
   enterSSR(ctx);
 
-  // Read client level: explicit option > component static property > default
   const clientLevel: ClientLevel = options?.clientLevel || (componentFn as any).clientLevel || 'spa';
 
   try {
     let rootNode = componentFn(props, componentId);
 
-    // Await async root (from Suspense)
     if (rootNode instanceof Promise) {
       try {
         rootNode = await rootNode;
@@ -49,7 +41,6 @@ export async function renderToString(
       }
     }
 
-    // Resolve pending Suspense boundaries
     while (ctx.pendingSuspense.length > 0) {
       const pending = ctx.pendingSuspense.shift()!;
       try {
@@ -57,11 +48,8 @@ export async function renderToString(
         if (resolved != null && pending.placeholder.parentNode) {
           const parent = pending.placeholder.parentNode;
           pending.placeholder.parentNode.replaceChild(resolved, pending.placeholder);
-        } else {
         }
-      } catch {
-        // Keep fallback
-      }
+      } catch {}
     }
 
     perf?.mark('noop:ssr:render');
@@ -95,14 +83,6 @@ export async function renderToString(
   }
 }
 
-/**
- * Render a NoopJS component to a ReadableStream.
- * Streams HTML in chunks for progressive loading.
- */
-/**
- * Render a NoopJS component to a ReadableStream with progressive shell-first output.
- * Streams the HTML shell immediately, renders the component, then streams content + state.
- */
 export function renderToStream(
   componentFn: (...args: any[]) => any,
   props: Record<string, any> = {},
@@ -117,14 +97,11 @@ export function renderToStream(
 
       try {
         const doc = ctx.document;
-
-        // Stream shell immediately
         controller.enqueue(encoder.encode('<!DOCTYPE html>\n<html>'));
         const headHtml = doc.documentElement.children[0]?.toHTML() || '<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>';
         controller.enqueue(encoder.encode(headHtml));
         controller.enqueue(encoder.encode('<body><div id="root">'));
 
-        // Render root component
         let rootNode: any;
         try {
           rootNode = componentFn(props, componentId);
@@ -135,7 +112,6 @@ export function renderToStream(
           return;
         }
 
-        // Handle async root node (from Suspense)
         if (rootNode instanceof Promise) {
           try {
             rootNode = await rootNode;
@@ -150,7 +126,6 @@ export function renderToStream(
           const container = doc.createElement('div');
           container.appendChild(rootNode);
 
-          // Await pending Suspense boundaries — resolves replace placeholders in the DOM tree
           while (ctx.pendingSuspense.length > 0) {
             const pending = ctx.pendingSuspense.shift()!;
             try {
@@ -158,17 +133,14 @@ export function renderToStream(
               if (resolved != null && pending.placeholder.parentNode) {
                 pending.placeholder.parentNode.replaceChild(resolved, pending.placeholder);
               }
-            } catch {
-              // Keep fallback
-            }
+            } catch {}
           }
 
-          // Now serialize the DOM tree with resolved content in place
           let content = container.toHTML();
           controller.enqueue(encoder.encode(content));
 
           controller.enqueue(encoder.encode('</div>'));
-          controller.enqueue(encoder.encode(stateToScript(getSerializedState())));
+          controller.enqueue(encoder.encode(stateToScript({ ...getSerializedState(), clientLevel: 'spa' as ClientLevel })));
           controller.enqueue(encoder.encode('</body></html>'));
           controller.close();
         } else {
@@ -211,6 +183,69 @@ function errorFallbackHtml(err: unknown): string {
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/**
+ * Generate the per-page inline bootstrap script.
+ * This script is synchronous (non-module) and includes:
+ * 1. A minimal signal/effect polyfill (~500 bytes)
+ * 2. Per-page signal creation + hardcoded binding effects
+ * 3. Event handler setup
+ * 4. Router initialization flag for SPA pages
+ *
+ * The @noopjs/client module (loaded as <script type="module">) provides
+ * startRouter, navigate, and verifyAndClean. It checks _needsRouter to start.
+ */
+export function generatePageBootstrap(
+  state: SerializedState,
+  clientLevel: ClientLevel,
+): string {
+  if (clientLevel === 'none') return '';
+
+  const signalEntries = Object.entries(state.signals);
+  const bindings = state.bindings || [];
+  const handlers = state.handlers || {};
+  const handlerKeys = Object.keys(handlers);
+
+  // Minimal signal/effect polyfill that matches @noopjs/signals API
+  const polyfill = `var __n=window.__noop=window.__noop||{};(function(){var _ae=null;__n.signal=function(v){var s=new Set;return{get(){if(_ae)s.add(_ae);return v},set(n){if(n!==v){v=n;for(var f of[...s])f()}}}};__n.effect=function(fn){var d=false,r=function(){if(d)return;_ae=r;try{fn()}finally{_ae=null}};r();var ed=function(){d=true};__n._trackEffect(ed);return ed};})();`;
+
+  const lines: string[] = [];
+  lines.push(`(function(s){`);
+  lines.push(`var _s={};`);
+
+  // Create signals
+  for (const [path] of signalEntries) {
+    lines.push(`_s['${path}']=__n.signal(s.signals['${path}']);`);
+  }
+
+  // Generate hardcoded binding effects
+  for (const binding of bindings) {
+    const ref = `_s['${binding.signalRef}']`;
+    if (binding.type === 'text') {
+      lines.push(`__n.effect(function(){var p=document.querySelector('[data-noop-node="${binding.parentNodeId}"]');if(p&&p.childNodes[${binding.childIndex}]!=null)p.childNodes[${binding.childIndex}].nodeValue=String(${ref}.get())});`);
+    } else if (binding.type === 'attribute') {
+      lines.push(`__n.effect(function(){var el=document.querySelector('[data-noop-node="${binding.nodeId}"]');if(el){var v=${ref}.get();if(v==null)el.removeAttribute('${binding.attributeName}');else el.setAttribute('${binding.attributeName}',String(v))}});`);
+    }
+  }
+
+  // Setup event handlers
+  for (const handlerId of handlerKeys) {
+    const meta = handlers[handlerId];
+    lines.push(`(function(){var el=document.querySelector('[data-noop-ev="${handlerId}"]');if(el)el.addEventListener('${meta.eventType}',async function(e){try{var m=await import('/_noop/handler/${meta.componentId}/${handlerId}.js');if(typeof m.default==='function')m.default(e)}catch{}})}());`);
+  }
+
+  // Set flags for module script
+  lines.push(`__n._pageInitRan=true;`);
+  if (clientLevel === 'spa' || clientLevel === 'full') {
+    lines.push(`__n._needsRouter=true;`);
+  }
+
+  lines.push(`})(JSON.parse(document.getElementById('__NOOP_STATE__').textContent));`);
+
+  const pageScript = lines.join('\n');
+  const escaped = pageScript.replace(/<\/script>/gi, '<\\/script>');
+  return `<script>${polyfill}${escaped}</script>`;
 }
 
 export function extractPrefetchLinks(html: string): string[] {

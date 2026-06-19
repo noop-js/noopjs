@@ -1,6 +1,6 @@
 {
   "name": "@noopjs/client",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "license": "ISC",
   "type": "module",
   "main": "./dist/index.js",
@@ -10,6 +10,14 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./primitives": {
+      "types": "./dist/primitives.d.ts",
+      "import": "./dist/primitives.js"
+    },
+    "./router": {
+      "types": "./dist/router.d.ts",
+      "import": "./dist/router.js"
     }
   },
   "files": [

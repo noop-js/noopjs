@@ -1,6 +1,6 @@
 import { createServer } from 'vite';
 import { noopVite } from '@noopjs/vite';
-import { type ClientLevel } from '@noopjs/server';
+import { generatePageBootstrap, type ClientLevel } from '@noopjs/server';
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -38,12 +38,18 @@ async function start() {
           const { render } = await vite.ssrLoadModule('/src/entry-server.ts');
           const rendered = await render();
           const clientLevel: ClientLevel = rendered.clientLevel;
-          const stateScript = `<script id="__NOOP_STATE__" type="application/json">${JSON.stringify(rendered.state)}</script>`;
-          const clientScript = clientLevel === 'none' ? '' : '<script type="module" src="/src/main.ts"></script>';
+          const escapedState = JSON.stringify(rendered.state)
+            .replace(/</g, '\\u003C')
+            .replace(/>/g, '\\u003E')
+            .replace(/-->/g, '--\\>');
+          const stateScript = `<script id="__NOOP_STATE__" type="application/json">${escapedState}</script>`;
+          const bootstrap = generatePageBootstrap(rendered.state, clientLevel);
+          const clientScript = (clientLevel === 'spa' || clientLevel === 'full')
+            ? '<script type="module" src="/src/main.ts"></script>' : '';
           const html = template
             .replace('<!--ssr-content-->', rendered.html)
             .replace('<!--client-script-->', clientScript)
-            .replace('</body>', stateScript + '\n</body>');
+            .replace('</body>', stateScript + '\n' + bootstrap + '\n</body>');
           const csp = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'";
           res.writeHead(200, {
             'Content-Type': 'text/html',

@@ -4,6 +4,7 @@ export {
   renderToStream,
   extractPrefetchLinks,
   prefetchLinkTags,
+  generatePageBootstrap,
 } from './render';
 
 export type { RenderResult, ClientLevel } from './render';

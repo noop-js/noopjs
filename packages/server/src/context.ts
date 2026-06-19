@@ -52,6 +52,7 @@ export interface SSRContext {
   pendingSuspense: SuspensePending[];
   nodeManifest: Map<number, NodeManifestEntry>;
   sentinelIdCounter: number;
+  renderedComponentIds: Set<string>;
 }
 
 let activeContext: SSRContext | null = null;
@@ -95,6 +96,7 @@ export function createSSRContext(rootComponentId: string): SSRContext {
     pendingSuspense: [],
     nodeManifest,
     sentinelIdCounter,
+    renderedComponentIds: new Set<string>(),
   };
   return ctx;
 }
@@ -181,6 +183,9 @@ export function getSerializedState(): SerializedState {
   const signals: Record<string, any> = {};
   for (const [path, value] of ctx.signalValues) {
     signals[path] = value;
+    // Derive component ID from signal path (e.g. "c0.count" → "c0")
+    const compId = path.split('.')[0];
+    ctx.renderedComponentIds.add(compId);
   }
 
   const contextValues: Record<string, any> = {};
@@ -201,4 +206,10 @@ export function getSerializedState(): SerializedState {
     contextValues: Object.keys(contextValues).length > 0 ? contextValues : undefined,
     nodeManifest,
   };
+}
+
+export function getRenderedComponentIds(): string[] {
+  const ctx = activeContext;
+  if (!ctx) return [];
+  return [...ctx.renderedComponentIds];
 }

@@ -1,6 +1,6 @@
 import { createServer } from 'vite';
 import { noopVite } from '@noopjs/vite';
-import { type ClientLevel } from '@noopjs/server';
+import { generatePageBootstrap, type ClientLevel } from '@noopjs/server';
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -33,11 +33,13 @@ async function start() {
           const escaped = JSON.stringify(result.state)
             .replace(/</g, '\\u003C').replace(/>/g, '\\u003E').replace(/-->/g, '--\\>');
           const stateScript = `<script id="__NOOP_STATE__" type="application/json">${escaped}</script>`;
-          const clientScript = clientLevel === 'none' ? '' : '<script type="module" src="/src/main.ts"></script>';
+          const bootstrap = generatePageBootstrap(result.state, clientLevel);
+          const clientScript = (clientLevel === 'spa' || clientLevel === 'full')
+            ? '<script type="module" src="/src/main.ts"></script>' : '';
           const html = template
             .replace('<!--ssr-content-->', result.html)
             .replace('<!--client-script-->', clientScript)
-            .replace('</body>', stateScript + '\n</body>');
+            .replace('</body>', stateScript + '\n' + bootstrap + '\n</body>');
           res.writeHead(200, { 'Content-Type': 'text/html' });
           res.end(html);
         } else {

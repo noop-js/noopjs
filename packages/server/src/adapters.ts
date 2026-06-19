@@ -1,4 +1,4 @@
-import { renderToString, prefetchLinkTags, type ClientLevel } from './render';
+import { renderToString, prefetchLinkTags, generatePageBootstrap, type ClientLevel } from './render';
 import type { IncomingMessage, ServerResponse } from 'http';
 
 export interface NoopRequest {
@@ -15,6 +15,11 @@ export interface NoopResponse {
 
 function clientScriptTag(clientLevel: ClientLevel): string {
   if (clientLevel === 'none') return '';
+  if (clientLevel === 'resume') {
+    // resume: inline bootstrap handles everything, no module needed
+    return '';
+  }
+  // spa/full: need the module script for startRouter + verifyAndClean
   return '\n  <script type="module" src="/src/main.ts"></script>';
 }
 
@@ -24,6 +29,8 @@ function buildPage(result: { html: string; state: any; clientLevel: ClientLevel 
     .replace(/>/g, '\\u003E')
     .replace(/-->/g, '--\\>');
   const prefetchTags = prefetchLinkTags(result.html);
+  const bootstrap = generatePageBootstrap(result.state, result.clientLevel);
+
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -32,7 +39,7 @@ function buildPage(result: { html: string; state: any; clientLevel: ClientLevel 
 </head>
 <body>
   <div id="root">${result.html}</div>
-  <script id="__NOOP_STATE__" type="application/json">${stateJson}</script>${clientScriptTag(result.clientLevel)}
+  <script id="__NOOP_STATE__" type="application/json">${stateJson}</script>${bootstrap}${clientScriptTag(result.clientLevel)}
 </body>
 </html>`;
 }
@@ -47,7 +54,6 @@ export function createNodeHandler(
       const html = buildPage(result);
       const etag = '"' + Buffer.from(html).length + '-' + Date.now().toString(36) + '"';
 
-      // ETag / 304 handling
       if (req.headers['if-none-match'] === etag) {
         res.writeHead(304, { 'ETag': etag });
         res.end();
@@ -80,6 +86,7 @@ export function createExpressMiddleware(
         .replace(/>/g, '\\u003E')
         .replace(/-->/g, '--\\>');
       const prefetchTags = prefetchLinkTags(result.html);
+      const bootstrap = generatePageBootstrap(result.state, result.clientLevel);
 
       const html = `<!DOCTYPE html>
 <html>
@@ -89,7 +96,7 @@ export function createExpressMiddleware(
 </head>
 <body>
   <div id="root">${result.html}</div>
-  <script id="__NOOP_STATE__" type="application/json">${stateJson}</script>${clientScriptTag(result.clientLevel)}
+  <script id="__NOOP_STATE__" type="application/json">${stateJson}</script>${bootstrap}${clientScriptTag(result.clientLevel)}
 </body>
 </html>`;
 
