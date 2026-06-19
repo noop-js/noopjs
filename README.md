@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/badge/CLS-0-brightgreen" alt="CLS 0" />
   <img src="https://img.shields.io/badge/INP-40ms-brightgreen" alt="INP 40ms" />
   <img src="https://img.shields.io/badge/Client_JS-0_KB_(static)-blue" alt="0 KB JS for static pages" />
-  <img src="https://img.shields.io/badge/version-0.5.0-blue" alt="Version 0.5.0" />
+  <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version 1.0.0" />
   <img src="https://img.shields.io/badge/license-ISC-blue" alt="ISC License" />
 </p>
 
@@ -300,5 +300,5 @@ NoopJS is built on a simple philosophy: the web doesn't need another framework. 
 
 <p align="center">
   <strong>LCP 0.06s · CLS 0 · INP 40ms · 0 KB JS on static pages</strong><br>
-  <em>v0.5.0</em>
+  <em>v1.0.0</em>
 </p>

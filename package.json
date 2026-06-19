@@ -1,8 +1,7 @@
 {
-  "name": "aether",
+  "name": "noopjs-monorepo",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "private": true,
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
@@ -11,7 +10,7 @@
     "version": "pnpm exec changeset version"
   },
   "keywords": [],
-  "author": "",
+  "author": "Mohammed Boukaba",
   "license": "ISC",
   "packageManager": "pnpm@10.18.2",
   "pnpm": {

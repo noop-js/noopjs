@@ -70,6 +70,11 @@ export function createExpressMiddleware(
     try {
       const result = await renderToString(componentFn);
 
+      const stateJson = JSON.stringify(result.state)
+        .replace(/</g, '\\u003C')
+        .replace(/>/g, '\\u003E')
+        .replace(/-->/g, '--\\>');
+
       const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -78,7 +83,7 @@ export function createExpressMiddleware(
 </head>
 <body>
   <div id="root">${result.html}</div>
-  <script id="__NOOP_STATE__" type="application/json">${JSON.stringify(result.state)}</script>
+  <script id="__NOOP_STATE__" type="application/json">${stateJson}</script>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>`;

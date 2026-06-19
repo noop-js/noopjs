@@ -282,8 +282,8 @@ async function runBuild() {
         },
       });
     }
-  } catch {
-    // No SSR entry, client-only build
+  } catch (e: any) {
+    console.error('[Noop] SSR build failed:', e?.message || e);
   }
 
   console.log('Build complete. Output in ./dist');

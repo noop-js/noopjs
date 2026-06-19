@@ -219,6 +219,11 @@ function disposeNodeEffects(node: Element): void {
     disposeNodeEffects(child);
     child = child.nextElementSibling;
   }
+  // Fire any pending onUnmount callbacks registered in CSR
+  if (pendingOnUnmount.length > 0) {
+    const fns = pendingOnUnmount.splice(0);
+    for (const fn of fns) fn();
+  }
 }
 
 export function startEffectCleanup(): void {
@@ -245,6 +250,10 @@ export function stopEffectCleanup(): void {
     cleanupObserver.disconnect();
     cleanupObserver = null;
     cleanupRoot = null;
+  }
+  if (pendingOnUnmount.length > 0) {
+    const fns = pendingOnUnmount.splice(0);
+    for (const fn of fns) fn();
   }
 }
 
@@ -333,6 +342,7 @@ export function onMount(fn: () => void): void {
 }
 
 const unmountRegistry = new Map<string, () => void>();
+const pendingOnUnmount: (() => void)[] = [];
 
 export function onUpdate(deps: (() => any)[], fn: () => void): () => void {
   if (isSSR()) return () => {};
@@ -343,15 +353,15 @@ export function onUpdate(deps: (() => any)[], fn: () => void): () => void {
 }
 
 export function onUnmount(fn: () => void): void {
-  if (isSSR()) return;
-  const ctx = getCtx();
-  if (ctx && ctx.rootComponentId) {
-    unmountRegistry.set(ctx.rootComponentId, fn);
-  } else {
-    // Fallback: register with a unique ID and dispose on next mount flush
-    const id = '__um_' + (nodeIdCounter++);
-    unmountRegistry.set(id, fn);
+  if (isSSR()) {
+    const ctx = getCtx();
+    if (ctx && ctx.rootComponentId) {
+      unmountRegistry.set(ctx.rootComponentId, fn);
+    }
+    return;
   }
+  // CSR: store in pending queue; fired by disposeNodeEffects on DOM removal
+  pendingOnUnmount.push(fn);
 }
 
 export function __noopDisposeComponent(compId: string): void {
@@ -459,11 +469,12 @@ export function createContext<T>(defaultValue: T): Context<T> {
       const stack = getContextStack(ctx);
       const prev = stack.get(_key) || [];
       stack.set(_key, [...prev, props.value]);
-      // Record context value for serialization
       ctx.contextValues.set(String(_key), props.value);
-      const result = childrenFn();
-      stack.set(_key, prev);
-      return result;
+      try {
+        return childrenFn();
+      } finally {
+        stack.set(_key, prev);
+      }
     }
     // CSR: use a global stack
     const g = globalThis as any;
@@ -471,9 +482,11 @@ export function createContext<T>(defaultValue: T): Context<T> {
     const stack = g.__aetherContextStack;
     const prev = stack.get(_key) || [];
     stack.set(_key, [...prev, props.value]);
-    const result = childrenFn();
-    stack.set(_key, prev);
-    return result;
+    try {
+      return childrenFn();
+    } finally {
+      stack.set(_key, prev);
+    }
   }
   return { _key, _defaultValue: defaultValue, Provider };
 }
@@ -613,6 +626,8 @@ export function Suspense(props: {
       if (resolved && resolved instanceof Node && fallbackNode && fallbackNode.parentNode) {
         container.replaceChild(resolved, fallbackNode);
       }
+    }).catch(() => {
+      // Promise rejected — keep fallback visible
     });
     return container;
   } catch {

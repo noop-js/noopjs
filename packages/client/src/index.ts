@@ -284,9 +284,29 @@ async function applyNavigation(nav: NavigationResponse, href: string): Promise<v
   observeLinks();
 }
 
+function sanitizeNode(node: Node): void {
+  if (node.nodeType === 1) {
+    const el = node as Element;
+    const attrs = el.attributes;
+    for (let i = attrs.length - 1; i >= 0; i--) {
+      const name = attrs[i].name;
+      if (name.startsWith('on') || name === 'href' && attrs[i].value.startsWith('javascript:')) {
+        el.removeAttribute(name);
+      }
+    }
+    let child = el.firstChild;
+    while (child) {
+      const next = child.nextSibling;
+      sanitizeNode(child);
+      child = next;
+    }
+  }
+}
+
 function performDOMSwap(html: string): void {
   const temp = document.createElement('div');
   temp.innerHTML = html;
+  sanitizeNode(temp);
 
   const root = document.querySelector('main') || document.getElementById('root');
   if (root) {

@@ -21,7 +21,11 @@ function flushEffects(): void {
     pendingEffects.clear();
     for (const eff of effects) {
       if (eff.dirty && !eff.disposed) {
-        eff.execute();
+        try {
+          eff.execute();
+        } catch (e) {
+          console.error('[Noop] Effect error:', e);
+        }
       }
     }
   }
@@ -178,13 +182,13 @@ class EffectImpl implements ReactiveNode {
   execute(): void {
     if (this.disposed) return;
 
-    // Unsubscribe from all current deps
+    // Save old deps in case execution fails — we need to stay subscribed for retry
+    const oldDeps = new Set(this.deps);
     for (const dep of this.deps) {
       dep.subscribers.delete(this);
     }
     this.deps.clear();
 
-    this.dirty = false;
     const prevTracker = currentTracker;
     currentTracker = this;
     try {
@@ -192,6 +196,16 @@ class EffectImpl implements ReactiveNode {
       if (typeof result === 'function') {
         this.disposer = result;
       }
+      this.dirty = false;
+    } catch (e) {
+      // Restore old deps so we stay subscribed and retry on next change
+      this.deps = oldDeps;
+      for (const dep of oldDeps) {
+        dep.subscribers.add(this);
+      }
+      this.dirty = true;
+      pendingEffects.add(this);
+      throw e;
     } finally {
       currentTracker = prevTracker;
     }
