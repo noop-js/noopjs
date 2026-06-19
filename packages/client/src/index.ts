@@ -38,6 +38,7 @@ let signalRegistry = new Map<string, ReturnType<typeof signal>>();
 let effectDisposers: (() => void)[] = [];
 let routerStarted = false;
 let navigationInProgress = false;
+let navToken: object | null = null;
 
 // ── Prefetch Cache ──────────────────────────────────────────
 
@@ -272,12 +273,14 @@ export async function navigate(href: string, options?: { replace?: boolean }): P
   const url = new URL(href, window.location.origin);
   if (url.origin !== window.location.origin) return;
 
+  const token = {};
+  navToken = token;
   navigationInProgress = true;
   try {
     const cached = prefetchCache.get(href);
     if (cached) {
       prefetchCache.delete(href);
-      await applyNavigation(cached, href, options);
+      await applyNavigation(cached, href, options, token);
       return;
     }
 
@@ -291,7 +294,7 @@ export async function navigate(href: string, options?: { replace?: boolean }): P
     }
 
     const nav: NavigationResponse = await response.json();
-    await applyNavigation(nav, href, options);
+    await applyNavigation(nav, href, options, token);
   } catch {
     try { window.location.href = href; } catch {}
   } finally {
@@ -299,7 +302,7 @@ export async function navigate(href: string, options?: { replace?: boolean }): P
   }
 }
 
-async function applyNavigation(nav: NavigationResponse, href: string, options?: { replace?: boolean }): Promise<void> {
+async function applyNavigation(nav: NavigationResponse, href: string, options?: { replace?: boolean }, token?: object): Promise<void> {
   const manifest = nav.state.nodeManifest || {};
   // Skip View Transitions on popstate-driven navigations — the transition
   // context can race with browser history updates and corrupt the DOM swap.
@@ -312,6 +315,11 @@ async function applyNavigation(nav: NavigationResponse, href: string, options?: 
   }
 
   applyState(nav.state);
+  // If a newer navigation has started (e.g., user pressed back during a view
+  // transition), this navigation is stale — don't push its URL to history,
+  // as that would corrupt the browser's history stack.
+  if (token && token !== navToken) return;
+
   // For browser back/forward (popstate), the browser already updated the URL.
   // Only push a new history entry for programmatic (click) navigation.
   if (!options?.replace) {
@@ -397,6 +405,9 @@ function performDOMSwap(
 }
 
 window.addEventListener('popstate', () => {
+  // Abort any in-flight click navigation — its pushState would fire after
+  // the browser's history already moved, corrupting the history stack.
+  navToken = null;
   navigate(window.location.pathname + window.location.search, { replace: true });
 });
 
