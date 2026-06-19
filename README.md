@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/LCP-0.06s-brightgreen" alt="LCP 0.06s" />
   <img src="https://img.shields.io/badge/CLS-0-brightgreen" alt="CLS 0" />
   <img src="https://img.shields.io/badge/INP-40ms-brightgreen" alt="INP 40ms" />
-  <img src="https://img.shields.io/badge/Client_JS-0_KB_(static)-blue" alt="0 KB JS for static pages" />
+  <img src="https://img.shields.io/badge/Client_runtime-3.56_KB_(gzipped)-blue" alt="3.56 KB gzipped client runtime" />
   <img src="https://img.shields.io/badge/version-1.1.0-blue" alt="Version 1.1.0" />
   <img src="https://img.shields.io/badge/mXSS-immune-brightgreen" alt="mXSS Immune" />
   <img src="https://img.shields.io/badge/license-ISC-blue" alt="ISC License" />
@@ -26,7 +26,7 @@
     ║                    ├── SSR:  HTML + Serialized State     ║
     ║                    │         │                           ║
     ║                    │         ▼                           ║
-    ║                    │    Client Resumer  ◄── 3.59 KB      ║
+    ║                    │    Client Runtime  ◄── 3.56 KB      ║
     ║                    │    (No hydration — just resume)     ║
     ║                    │                                     ║
     ║                    └── Atomic CSS  +  Tailwind v4        ║
@@ -44,7 +44,7 @@
 
 **The silos must break.** Components should work everywhere. NoopJS components compile to native Custom Elements on demand. Write once, embed anywhere.
 
-**JavaScript bundles must shrink.** The average React page ships ~45 KB of framework JS. NoopJS ships 0 KB for static pages. Interactive pages ship only the exact handler code, lazily loaded on first click. The resumer is 3.59 KB gzipped.
+**JavaScript bundles must shrink.** The average React page ships ~45 KB of framework JS. NoopJS ships 0 KB for static pages. Interactive pages ship only the exact handler code, lazily loaded on first click, plus a 3.56 KB gzipped client runtime (resumer + SPA router + sentinel verifier).
 
 ---
 
@@ -70,7 +70,7 @@ export default defineConfig({
 | **Signals** | TC39-standard `signal`, `computed`, `effect`, `batch`. |
 | **Atomic CSS** | Style objects → hashed utility classes. Zero runtime CSS-in-JS. |
 | **SSR engine** | Render to HTML, serialize state, resume on client. True resumability. |
-| **Client resumer** | ~3.59 KB gzipped. Re-attaches signals to DOM without re-running components. |
+| **Client runtime** | 3.56 KB gzipped (resumer + router + prefetcher + sentinel verifier). Re-attaches signals to DOM without re-running components. |
 | **SPA router** | Intercepts `<a>` clicks. View Transitions API. Auto-prefetching. |
 | **Event delegation** | Single global listener. Handlers loaded lazily on first interaction. |
 | **SPA security** | mXSS-immune page swaps via per-render sentinel manifest. ~50 bytes. No DOMPurify. |
@@ -313,6 +313,6 @@ NoopJS is built on a simple philosophy: the web doesn't need another framework. 
 ---
 
 <p align="center">
-  <strong>LCP 0.06s · CLS 0 · INP 40ms · 0 KB JS on static pages</strong><br>
+  <strong>LCP 0.06s · CLS 0 · INP 40ms · 0 KB JS on static · 3.56 KB runtime on interactive</strong><br>
   <em>v1.1.0</em>
 </p>
