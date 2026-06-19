@@ -17,12 +17,18 @@ export interface HandlerRecord {
   handlerIndex: number;
 }
 
+export interface NodeManifestEntry {
+  tag: string;
+  attrs: string[];
+}
+
 export interface SerializedState {
   signals: Record<string, any>;
   bindings: BindingRecord[];
   handlers: Record<string, HandlerRecord>;
   rootId: string;
   contextValues?: Record<string, any>;
+  nodeManifest?: Record<number, NodeManifestEntry>;
 }
 
 export interface SuspensePending {
@@ -41,6 +47,8 @@ export interface SSRContext {
   rootComponentId: string;
   contextValues: Map<string, any>;
   pendingSuspense: SuspensePending[];
+  nodeManifest: Map<number, NodeManifestEntry>;
+  sentinelIdCounter: number;
 }
 
 let activeContext: SSRContext | null = null;
@@ -55,8 +63,24 @@ export function isSSR(): boolean {
 }
 
 export function createSSRContext(rootComponentId: string): SSRContext {
+  const doc = new ServerDocument();
+  const nodeManifest = new Map<number, NodeManifestEntry>();
+  let sentinelIdCounter = 0;
+  doc._sentinelHost = {
+    allocateSentinelId(tag: string): number {
+      const id = sentinelIdCounter++;
+      nodeManifest.set(id, { tag, attrs: [] });
+      return id;
+    },
+    recordNodeAttribute(sentinelId: number, attr: string): void {
+      const entry = nodeManifest.get(sentinelId);
+      if (entry && !entry.attrs.includes(attr) && attr !== 'data-n') {
+        entry.attrs.push(attr);
+      }
+    },
+  };
   const ctx: SSRContext = {
-    document: new ServerDocument(),
+    document: doc,
     signalValues: new Map(),
     signalPaths: new Map(),
     bindings: [],
@@ -66,6 +90,8 @@ export function createSSRContext(rootComponentId: string): SSRContext {
     rootComponentId,
     contextValues: new Map(),
     pendingSuspense: [],
+    nodeManifest,
+    sentinelIdCounter,
   };
   return ctx;
 }
@@ -159,11 +185,17 @@ export function getSerializedState(): SerializedState {
     contextValues[String(key)] = value;
   }
 
+  const nodeManifest: Record<number, NodeManifestEntry> = {};
+  for (const [id, entry] of ctx.nodeManifest) {
+    nodeManifest[id] = entry;
+  }
+
   return {
     signals,
     bindings: ctx.bindings,
     handlers: ctx.handlers,
     rootId: ctx.rootComponentId,
     contextValues: Object.keys(contextValues).length > 0 ? contextValues : undefined,
+    nodeManifest,
   };
 }

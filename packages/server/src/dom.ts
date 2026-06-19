@@ -3,6 +3,16 @@
  * Implements just enough of the DOM API for compiled NoopJS components.
  */
 
+export interface NodeManifestEntry {
+  tag: string;
+  attrs: string[];
+}
+
+export interface SentinelHost {
+  allocateSentinelId(tag: string): number;
+  recordNodeAttribute(sentinelId: number, attr: string): void;
+}
+
 export class ServerTextNode {
   nodeType = 3;
   nodeName = '#text';
@@ -53,6 +63,9 @@ export class ServerElement {
   _isFragment: boolean = false;
   className: string = '';
   innerHTML: string = '';
+  _sentinelId: number = -1;
+  _sentinelActive: boolean = false;
+  _sentinelHost: SentinelHost | null = null;
 
   get childNodes(): (ServerElement | ServerTextNode)[] {
     return this.children;
@@ -67,6 +80,9 @@ export class ServerElement {
       this.className = value;
     }
     this.attributes.set(name, value);
+    if (this._sentinelActive && this._sentinelId >= 0 && this._sentinelHost) {
+      this._sentinelHost.recordNodeAttribute(this._sentinelId, name);
+    }
   }
 
   getAttribute(name: string): string | null {
@@ -138,6 +154,9 @@ export class ServerElement {
     for (const [key, val] of this.attributes) {
       parts.push(` ${key}="${escapeAttr(val)}"`);
     }
+    if (this._sentinelId >= 0) {
+      parts.push(` data-n="${this._sentinelId}"`);
+    }
     return parts.join('');
   }
 
@@ -150,6 +169,7 @@ export class ServerElement {
 export class ServerDocument {
   body: ServerElement;
   private _root: ServerElement;
+  _sentinelHost: SentinelHost | null = null;
 
   constructor() {
     this._root = new ServerElement('html');
@@ -159,7 +179,13 @@ export class ServerDocument {
   }
 
   createElement(tagName: string): ServerElement {
-    return new ServerElement(tagName);
+    const el = new ServerElement(tagName);
+    if (this._sentinelHost) {
+      el._sentinelId = this._sentinelHost.allocateSentinelId(tagName);
+      el._sentinelActive = true;
+      el._sentinelHost = this._sentinelHost;
+    }
+    return el;
   }
 
   createTextNode(text: string): ServerTextNode {

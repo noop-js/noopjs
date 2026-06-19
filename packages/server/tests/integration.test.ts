@@ -56,7 +56,8 @@ describe('integration: compile → SSR → resume', () => {
 
     const result = await renderToString(Comp);
     expect(result.html).toContain('hello from compiled');
-    expect(result.html).toContain('<div class="app">');
+    expect(result.html).toContain('class="app"');
+    expect(result.html).toContain('data-n=');
     expect(result.state.rootId).toBe('c0');
     expect(result.state.signals).toBeDefined();
     expect(result.state.bindings).toBeDefined();

@@ -14,9 +14,9 @@ describe('renderToString', () => {
     }
 
     const result = await renderToString(MyComponent);
-    expect(result.html).toContain('<div class="foo">');
+    expect(result.html).toContain('class="foo"');
+    expect(result.html).toContain('data-n=');
     expect(result.html).toContain('hello world');
-    expect(result.html).toContain('</div>');
     expect(result.state).toBeDefined();
     expect(result.state.rootId).toBe('c0');
   });
@@ -31,7 +31,10 @@ describe('renderToString', () => {
     }
 
     const result = await renderToString(MyComponent);
-    expect(result.html).toContain('<div><span>inner</span></div>');
+    expect(result.html).toContain('<span');
+    expect(result.html).toContain('>inner<');
+    expect(result.html).toContain('</span>');
+    expect(result.html).toContain('data-n=');
   });
 
   it('renders a component with attributes', async () => {

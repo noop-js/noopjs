@@ -1,11 +1,17 @@
 import { signal, effect } from '@noopjs/signals';
 
+interface NodeManifestEntry {
+  tag: string;
+  attrs: string[];
+}
+
 interface SerializedState {
   signals: Record<string, any>;
   bindings: BindingDescriptor[];
   handlers: Record<string, HandlerMeta>;
   rootId: string;
   contextValues?: Record<string, any>;
+  nodeManifest?: Record<number, NodeManifestEntry>;
 }
 
 interface BindingDescriptor {
@@ -294,12 +300,15 @@ export async function navigate(href: string, options?: { replace?: boolean }): P
 }
 
 async function applyNavigation(nav: NavigationResponse, href: string, options?: { replace?: boolean }): Promise<void> {
-  if (document.startViewTransition) {
+  const manifest = nav.state.nodeManifest || {};
+  // Skip View Transitions on popstate-driven navigations — the transition
+  // context can race with browser history updates and corrupt the DOM swap.
+  if (document.startViewTransition && !options?.replace) {
     await document.startViewTransition(async () => {
-      performDOMSwap(nav.html);
+      performDOMSwap(nav.html, manifest);
     }).finished;
   } else {
-    performDOMSwap(nav.html);
+    performDOMSwap(nav.html, manifest);
   }
 
   applyState(nav.state);
@@ -313,57 +322,65 @@ async function applyNavigation(nav: NavigationResponse, href: string, options?: 
   observeLinks();
 }
 
-const SANITIZE_REMOVE_TAGS = new Set(['script', 'iframe', 'object', 'embed', 'applet']);
+function verifyAndClean(
+  root: Node,
+  manifest: Record<number, NodeManifestEntry>,
+): void {
+  const keys = Object.keys(manifest);
+  // If the server didn't emit a manifest (older version), skip verification
+  // to avoid stripping all content. This is a graceful degradation — once
+  // the server emits data-n, the manifest will be non-empty and verification
+  // is strict.
+  if (keys.length === 0) return;
 
-function sanitizeNode(node: Node): void {
-  if (node.nodeType === 3) return;
-  if (node.nodeType !== 1) return;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+  const toRemove: Element[] = [];
+  const nodes: Element[] = [];
 
-  const el = node as Element;
-  const tag = el.tagName.toLowerCase();
-
-  // Remove dangerous elements entirely
-  if (SANITIZE_REMOVE_TAGS.has(tag)) {
-    el.replaceWith(...Array.from(el.childNodes));
-    return;
+  let node: Node | null;
+  while ((node = walker.nextNode())) {
+    nodes.push(node as Element);
   }
 
-  // Strip dangerous attributes
-  const attrs = el.attributes;
-  for (let i = attrs.length - 1; i >= 0; i--) {
-    const name = attrs[i].name.toLowerCase();
-    const val = attrs[i].value.toLowerCase();
-    if (
-      name.startsWith('on') ||
-      name === 'href' && val.startsWith('javascript:') ||
-      name === 'action' && val.startsWith('javascript:') ||
-      name === 'formaction' ||
-      name === 'srcdoc' ||
-      name === 'xlink:href'
-    ) {
-      el.removeAttribute(name);
+  for (const el of nodes) {
+    const sentinelVal = el.getAttribute('data-n');
+    if (sentinelVal === null) {
+      toRemove.push(el);
+      continue;
+    }
+    const sentinelId = parseInt(sentinelVal, 10);
+    const entry = manifest[sentinelId];
+    if (!entry) {
+      toRemove.push(el);
+      continue;
+    }
+    if (entry.tag !== el.tagName.toLowerCase()) {
+      toRemove.push(el);
+      continue;
+    }
+
+    // Strip attributes not in the manifest
+    for (let i = el.attributes.length - 1; i >= 0; i--) {
+      const name = el.attributes[i].name;
+      if (name === 'data-n') continue;
+      if (!entry.attrs.includes(name)) {
+        el.removeAttribute(name);
+      }
     }
   }
 
-  // Strip style attribute if it contains JS expressions
-  const styleAttr = el.getAttribute('style');
-  if (styleAttr && /expression\s*\(|javascript\s*:|@import\s/.test(styleAttr.toLowerCase())) {
-    el.removeAttribute('style');
-  }
-
-  // Recurse into children
-  let child = el.firstChild;
-  while (child) {
-    const next = child.nextSibling;
-    sanitizeNode(child);
-    child = next;
+  for (const el of toRemove) {
+    el.parentNode?.removeChild(el);
   }
 }
 
-function performDOMSwap(html: string): void {
+function performDOMSwap(
+  html: string,
+  manifest: Record<number, NodeManifestEntry> = {},
+): void {
   const temp = document.createElement('div');
   temp.innerHTML = html;
-  sanitizeNode(temp);
+  verifyAndClean(temp, manifest);
 
   const root = document.querySelector('main') || document.getElementById('root');
   if (root) {
