@@ -1,6 +1,6 @@
 {
   "name": "create-noopjs",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "license": "ISC",
   "type": "module",
   "main": "./dist/index.js",
@@ -8,8 +8,15 @@
   "bin": {
     "create-noopjs": "./bin/create-noopjs.mjs"
   },
-  "files": ["dist", "bin", "src/templates"],
-  "publishConfig": { "access": "public" },
+  "files": [
+    "dist",
+    "bin",
+    "src/templates",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc && cp -r src/templates dist/templates",
     "prepublishOnly": "tsc && cp -r src/templates dist/templates"

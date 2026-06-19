@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/badge/CLS-0-brightgreen" alt="CLS 0" />
   <img src="https://img.shields.io/badge/INP-40ms-brightgreen" alt="INP 40ms" />
   <img src="https://img.shields.io/badge/Client_JS-0_KB_(static)-blue" alt="0 KB JS for static pages" />
-  <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version 1.0.0" />
+  <img src="https://img.shields.io/badge/version-1.1.0-blue" alt="Version 1.1.0" />
   <img src="https://img.shields.io/badge/license-ISC-blue" alt="ISC License" />
 </p>
 
@@ -222,15 +222,15 @@ Resolves to `p-6`, `text-blue-500` at compile time. Both systems coexist on the 
 
 | Package | Version | Description |
 |---|---|---|
-| `@noopjs/signals` | 1.0.0 | TC39 Signals — `signal`, `computed`, `effect`, `batch`, `untrack`, `readonly` |
-| `@noopjs/compiler` | 1.0.0 | Compiles `.noop.tsx` to vanilla JS. Exports `createTailwindResolver`. |
-| `@noopjs/runtime` | 1.0.0 | Browser runtime — `bindText`, `bindEvent`, `bindStyle`, `onMount`, Context, Portals, Suspense |
-| `@noopjs/client` | 1.0.0 | Client resumer — SSR hydration, SPA router, prefetching |
-| `@noopjs/server` | 1.0.0 | SSR engine — `renderToString`, `renderToStream`, file-based routing, caching |
-| `@noopjs/vite` | 1.0.0 | Vite plugin — compiles `.noop.tsx`, extracts CSS, HMR, handler splitting |
-| `@noopjs/css` | 1.0.0 | Atomic CSS extractor — `extractStyles()` converts style objects to atomic classes |
-| `@noopjs/cli` | 1.0.0 | CLI — `dev`, `build`, `generate`, `analyze`, `check`, `init` |
-| `create-noopjs` | 1.0.0 | `npm create noopjs` — project scaffolding with templates |
+| `@noopjs/signals` | 1.1.0 | TC39 Signals — `signal`, `computed`, `effect`, `batch`, `untrack`, `readonly` |
+| `@noopjs/compiler` | 1.1.0 | Compiles `.noop.tsx` to vanilla JS. Exports `createTailwindResolver`. |
+| `@noopjs/runtime` | 1.1.0 | Browser runtime — `bindText`, `bindEvent`, `bindStyle`, `onMount`, Context, Portals, Suspense |
+| `@noopjs/client` | 1.1.0 | Client resumer — SSR hydration, SPA router, prefetching |
+| `@noopjs/server` | 1.1.0 | SSR engine — `renderToString`, `renderToStream`, file-based routing, caching |
+| `@noopjs/vite` | 1.1.0 | Vite plugin — compiles `.noop.tsx`, extracts CSS, HMR, handler splitting |
+| `@noopjs/css` | 1.1.0 | Atomic CSS extractor — `extractStyles()` converts style objects to atomic classes |
+| `@noopjs/cli` | 1.1.0 | CLI — `dev`, `build`, `generate`, `analyze`, `check`, `init` |
+| `create-noopjs` | 1.1.0 | `npm create noopjs` — project scaffolding with templates |
 
 ---
 
@@ -300,5 +300,5 @@ NoopJS is built on a simple philosophy: the web doesn't need another framework. 
 
 <p align="center">
   <strong>LCP 0.06s · CLS 0 · INP 40ms · 0 KB JS on static pages</strong><br>
-  <em>v1.0.0</em>
+  <em>v1.1.0</em>
 </p>
