@@ -1,4 +1,8 @@
 <p align="center">
+  <img src="noopjs_hero.png" alt="NoopJS" width="600" />
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/LCP-0.06s-brightgreen" alt="LCP 0.06s" />
   <img src="https://img.shields.io/badge/CLS-0-brightgreen" alt="CLS 0" />
   <img src="https://img.shields.io/badge/INP-40ms-brightgreen" alt="INP 40ms" />
@@ -6,9 +10,6 @@
   <img src="https://img.shields.io/badge/version-0.5.0-blue" alt="Version 0.5.0" />
   <img src="https://img.shields.io/badge/license-ISC-blue" alt="ISC License" />
 </p>
-
-<h1 align="center">NoopJS</h1>
-<p align="center"><strong>Zero-runtime · Resumable · Signal-based · Atomic CSS · Tailwind v4 · SSR · SPA</strong></p>
 
 <p align="center">
   <a href="#quick-start">Quick Start</a> ·
