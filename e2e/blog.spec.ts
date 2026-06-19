@@ -160,6 +160,70 @@ test.describe('Noop Blog SSR + Client Navigation', () => {
   });
 });
 
+test.describe('Noop Blog client: none', () => {
+  test('about page has zero <script> tags', async ({ page }) => {
+    await page.goto('/about');
+
+    // client: none means no state script, no bootstrap, no module script
+    const scripts = page.locator('script');
+    await expect(scripts).toHaveCount(0);
+  });
+});
+
+test.describe('Noop Blog Multi-Signal Form (resume)', () => {
+  test('form page serves SSR HTML with signal state', async ({ page }) => {
+    await page.goto('/form');
+
+    const stateEl = page.locator('#__NOOP_STATE__');
+    await expect(stateEl).toBeAttached();
+
+    const state = JSON.parse(await stateEl.textContent()!);
+    expect(state.signals).toBeDefined();
+    const signalKeys = Object.keys(state.signals);
+    expect(signalKeys.length).toBeGreaterThanOrEqual(5);
+
+    await expect(page.locator('h1')).toHaveText('Feedback Form');
+
+    // Static parts of text bindings should be SSR-rendered
+    await expect(page.locator('text=Name:').first()).toBeVisible();
+    await expect(page.locator('text=Email:').first()).toBeVisible();
+    await expect(page.locator('text=Rating:').first()).toBeVisible();
+    await expect(page.locator('text=Message:').first()).toBeVisible();
+  });
+
+  test('typing in fields updates signal-driven text display', async ({ page }) => {
+    await page.goto('/form');
+    await page.waitForTimeout(500);
+
+    const nameInput = page.locator('input').first();
+    await nameInput.fill('Alice');
+
+    await expect(page.locator('p').first()).toContainText('Name:');
+    await expect(page.locator('p').first()).toContainText('Alice');
+  });
+
+  test('multiple fields update independently', async ({ page }) => {
+    await page.goto('/form');
+    await page.waitForTimeout(500);
+
+    const inputs = page.locator('input');
+    await inputs.nth(0).fill('Bob');
+    await inputs.nth(1).fill('bob@test.com');
+    await inputs.nth(2).fill('8');
+
+    const select = page.locator('select');
+    await select.selectOption('feature');
+
+    const textarea = page.locator('textarea');
+    await textarea.fill('Great framework!');
+
+    await expect(page.locator('text=Name:').first()).toContainText('Bob');
+    await expect(page.locator('text=Email:').first()).toContainText('bob@test.com');
+    await expect(page.locator('text=Rating:').first()).toContainText('8');
+    await expect(page.locator('text=Message:').first()).toContainText('Great framework!');
+  });
+});
+
 test.describe('Noop Blog Performance', () => {
   test('full page fetch is fast', async ({ page }) => {
     await page.goto('/');

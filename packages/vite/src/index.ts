@@ -1,12 +1,19 @@
 import type { Plugin, ResolvedConfig, ViteDevServer } from 'vite';
 import { compile } from '@noopjs/compiler';
 import { extractStyles } from '@noopjs/css';
+import fs from 'fs';
+import path from 'path';
 
 const NOOP_FILE_PATTERN = /\.noop\.(tsx|ts)$/;
 const VIRTUAL_CSS_PREFIX = '\0noop-css:';
 const HANDLER_PREFIX = '\0noop-handler:';
 
 let handlerCodeMap = new Map<string, string>();
+
+/** Workspace packages that can be externalized. When their dist changes during
+ *  dev, the Vite dev server needs to invalidate the SSR module cache.
+ *  Without this, developers get stale behavior after rebuilding a workspace package. */
+const EXTERNALIZED_PACKAGES = ['@noopjs/runtime', '@noopjs/signals'];
 
 export interface NoopViteOptions {
   cssMode?: 'atomic' | 'inline';
@@ -93,6 +100,37 @@ function vlqEncode(values: number[]): string {
 
     configureServer(devServer) {
       server = devServer;
+
+      // Watch externalized workspace packages for changes and restart the dev
+      // server so SSR module cache is invalidated (Node.js ESM cache can't be
+      // cleared per-module, so a restart is the reliable path).
+      if (config.command === 'serve') {
+        let restartTimer: ReturnType<typeof setTimeout> | undefined;
+        const scheduleRestart = () => {
+          if (restartTimer) return;
+          restartTimer = setTimeout(() => {
+            restartTimer = undefined;
+            devServer.restart(true);
+          }, 300);
+        };
+
+        for (const pkgName of EXTERNALIZED_PACKAGES) {
+          try {
+            const pkgMain = require.resolve(pkgName + '/package.json');
+            const pkgDir = path.dirname(pkgMain);
+            const distDir = path.join(pkgDir, 'dist');
+            if (fs.existsSync(distDir)) {
+              fs.watch(distDir, { recursive: true }, (eventType, filename) => {
+                if (filename && (filename.endsWith('.js') || filename.endsWith('.mjs') || filename.endsWith('.cjs'))) {
+                  scheduleRestart();
+                }
+              });
+            }
+          } catch {
+            // Package not installed — skip
+          }
+        }
+      }
     },
 
     resolveId(id: string, importer) {

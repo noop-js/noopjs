@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/LCP-0.06s-brightgreen" alt="LCP 0.06s" />
   <img src="https://img.shields.io/badge/CLS-0-brightgreen" alt="CLS 0" />
   <img src="https://img.shields.io/badge/INP-40ms-brightgreen" alt="INP 40ms" />
-  <img src="https://img.shields.io/badge/Client_runtime-3.06_KB_(gzipped)-blue" alt="3.06 KB gzipped client runtime" />
+  <img src="https://img.shields.io/badge/Per‑page_JS-0 KB_·_466 B_·_3.7 KB-blue" alt="Per-page JS: 0 KB static, 466 B resume, 3.7 KB SPA" />
   <img src="https://img.shields.io/badge/version-1.1.0-blue" alt="Version 1.1.0" />
   <img src="https://img.shields.io/badge/mXSS-immune-brightgreen" alt="mXSS Immune" />
   <img src="https://img.shields.io/badge/license-ISC-blue" alt="ISC License" />
@@ -26,7 +26,7 @@
     ║                    ├── SSR:  HTML + Serialized State     ║
     ║                    │         │                           ║
     ║                    │         ▼                           ║
-    ║                    │    Client Runtime  ◄── 3.06 KB      ║
+    ║                    │    Client Runtime  ◄── 0–3.7 KB     ║
     ║                    │    (No hydration — just resume)     ║
     ║                    │                                     ║
     ║                    └── Atomic CSS  +  Tailwind v4        ║
@@ -44,7 +44,7 @@
 
 **The silos must break.** Components should work everywhere. NoopJS components compile to native Custom Elements on demand. Write once, embed anywhere.
 
-**JavaScript bundles must shrink.** The average React page ships ~45 KB of framework JS. NoopJS ships 0 KB for static pages. Interactive pages ship only the exact handler code, lazily loaded on first click, plus a ~3 KB gzipped client runtime (resumer + SPA router + sentinel verifier).
+**JavaScript bundles must shrink.** The average React page ships ~45 KB of framework JS. NoopJS ships **0 KB for static pages**, **466 B for resume** (counter fully interactive — signal, binding, handler), and **317 B inline + 3.5 KB cached shared runtime for SPA**.
 
 ---
 
@@ -70,7 +70,7 @@ export default defineConfig({
 | **Signals** | TC39-standard `signal`, `computed`, `effect`, `batch`. |
 | **Atomic CSS** | Style objects → hashed utility classes. Zero runtime CSS-in-JS. |
 | **SSR engine** | Render to HTML, serialize state, resume on client. True resumability. |
-| **Client runtime** | ~3 KB gzipped (resumer + router + sentinel verifier). Re-attaches signals to DOM without re-running components. Native `<link rel="prefetch">` eliminates JS prefetcher. |
+| **Client runtime** | 0 KB static, 466 B resume (inline), 317 B inline + 3.5 KB cached shared for SPA. Re-attaches signals to DOM without re-running components. Native `<link rel="prefetch">` eliminates JS prefetcher. |
 | **SPA router** | Intercepts `<a>` clicks. View Transitions API. Native `<link rel="prefetch">`. |
 | **Event delegation** | Single global listener. Handlers loaded lazily on first interaction. |
 | **SPA security** | mXSS-immune page swaps via per-render sentinel manifest. ~50 bytes. No DOMPurify. |
@@ -181,6 +181,8 @@ No JSX at runtime. No framework imports. No VDOM. Just DOM.
 ### Resumability (Not Hydration)
 
 Hydration runs a component on the client and diffs its output against server HTML — duplicate work. Resumption serializes the reactive graph and re-attaches it without running a single line of component code.
+
+Per-page JavaScript payloads: **0 KB** for `client: none`, **466 B** gzipped for `client: resume` (polyfill + signals + bindings + inline handlers), **317 B** inline + **3.5 KB** cached shared runtime for `client: spa`.
 
 ```
          SSR                               Client
@@ -313,6 +315,6 @@ NoopJS is built on a simple philosophy: the web doesn't need another framework. 
 ---
 
 <p align="center">
-  <strong>LCP 0.06s · CLS 0 · INP 40ms · 0 KB JS on static · ~3 KB runtime on interactive</strong><br>
+  <strong>LCP 0.06s · CLS 0 · INP 40ms · 0 KB static · 466 B resume · 317 B + 3.5 KB cached SPA</strong><br>
   <em>v1.1.0</em>
 </p>

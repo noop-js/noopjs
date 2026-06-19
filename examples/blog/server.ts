@@ -29,6 +29,7 @@ async function start() {
   const routeMap: Record<string, string> = {
     '/': 'index',
     '/about': 'about',
+    '/form': 'form',
   };
 
   const server = http.createServer(async (req, res) => {
@@ -62,11 +63,14 @@ async function start() {
         const { render } = await vite.ssrLoadModule('/src/entry-server.ts');
         const result = await render(routeName, params);
         const clientLevel: ClientLevel = result.clientLevel;
-        const escapedState = JSON.stringify(result.state)
-          .replace(/</g, '\\u003C')
-          .replace(/>/g, '\\u003E')
-          .replace(/-->/g, '--\\>');
-        const stateScript = `<script id="__NOOP_STATE__" type="application/json">${escapedState}</script>`;
+        const stateScript = clientLevel !== 'none'
+          ? `<script id="__NOOP_STATE__" type="application/json">${
+              JSON.stringify(result.state)
+                .replace(/</g, '\\u003C')
+                .replace(/>/g, '\\u003E')
+                .replace(/-->/g, '--\\>')
+            }</script>`
+          : '';
         const bootstrap = generatePageBootstrap(result.state, clientLevel);
         const clientScript = (clientLevel === 'spa' || clientLevel === 'full')
           ? '<script type="module" src="/src/main.ts"></script>' : '';

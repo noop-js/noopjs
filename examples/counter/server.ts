@@ -38,11 +38,14 @@ async function start() {
           const { render } = await vite.ssrLoadModule('/src/entry-server.ts');
           const rendered = await render();
           const clientLevel: ClientLevel = rendered.clientLevel;
-          const escapedState = JSON.stringify(rendered.state)
-            .replace(/</g, '\\u003C')
-            .replace(/>/g, '\\u003E')
-            .replace(/-->/g, '--\\>');
-          const stateScript = `<script id="__NOOP_STATE__" type="application/json">${escapedState}</script>`;
+          const stateScript = clientLevel !== 'none'
+            ? `<script id="__NOOP_STATE__" type="application/json">${
+                JSON.stringify(rendered.state)
+                  .replace(/</g, '\\u003C')
+                  .replace(/>/g, '\\u003E')
+                  .replace(/-->/g, '--\\>')
+              }</script>`
+            : '';
           const bootstrap = generatePageBootstrap(rendered.state, clientLevel);
           const clientScript = (clientLevel === 'spa' || clientLevel === 'full')
             ? '<script type="module" src="/src/main.ts"></script>' : '';
