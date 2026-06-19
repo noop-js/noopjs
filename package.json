@@ -1,0 +1,30 @@
+{
+  "name": "aether",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test --reporter=list",
+    "release": "pnpm exec changeset publish",
+    "version": "pnpm exec changeset version"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.18.2",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
+  "devDependencies": {
+    "@changesets/changelog-github": "^0.7.0",
+    "@changesets/cli": "^2.31.0",
+    "@playwright/test": "^1.61.0",
+    "jsdom": "^29.1.1",
+    "playwright": "^1.61.0",
+    "vitest": "^4.1.9"
+  }
+}

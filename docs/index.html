@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NoopJS — Documentation</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg-card: #161b22;
+    --bg-hover: #1c2333;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-dim: #8b949e;
+    --accent: #58a6ff;
+    --accent-dim: #1f6feb;
+    --green: #3fb950;
+    --orange: #d29922;
+    --purple: #bc8cff;
+    --pink: #f778ba;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+
+  /* Layout */
+  .layout { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 280px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    padding: 24px 0;
+    overflow-y: auto;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    background: var(--bg);
+  }
+  .sidebar-header {
+    padding: 0 20px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .sidebar-header h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .sidebar-header .tagline {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+  .sidebar nav { padding: 0 0; }
+  .nav-section { margin-bottom: 4px; }
+  .nav-section-title {
+    padding: 6px 20px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+  }
+  .nav-item {
+    display: block;
+    padding: 6px 20px 6px 20px;
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 14px;
+    transition: all 0.15s;
+    border-left: 2px solid transparent;
+  }
+  .nav-item:hover { color: var(--text); background: var(--bg-hover); }
+  .nav-item.active {
+    color: var(--accent);
+    border-left-color: var(--accent);
+    background: rgba(88, 166, 255, 0.08);
+  }
+
+  .content {
+    flex: 1;
+    max-width: 960px;
+    padding: 48px 64px 96px;
+    min-width: 0;
+  }
+
+  /* Typography */
+  h1 { font-size: 36px; font-weight: 700; margin: 0 0 8px; letter-spacing: -0.02em; }
+  h2 {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 40px 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    letter-spacing: -0.01em;
+  }
+  h3 { font-size: 18px; font-weight: 600; margin: 28px 0 8px; }
+  h4 { font-size: 15px; font-weight: 600; margin: 20px 0 6px; color: var(--text-dim); }
+  p { margin: 0 0 16px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { color: var(--text); font-weight: 600; }
+  ul, ol { margin: 0 0 16px; padding-left: 24px; }
+  li { margin-bottom: 4px; }
+
+  /* Code */
+  code {
+    font-family: var(--mono);
+    font-size: 13px;
+    background: var(--bg-card);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--pink);
+  }
+  pre {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    overflow-x: auto;
+    margin: 0 0 20px;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  pre code {
+    background: none;
+    padding: 0;
+    color: var(--text);
+  }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 20px;
+    font-size: 14px;
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    text-align: left;
+  }
+  th {
+    background: var(--bg-card);
+    font-weight: 600;
+    color: var(--text-dim);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  td { color: var(--text); }
+  tr:hover td { background: var(--bg-hover); }
+
+  /* Callouts */
+  .callout {
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin: 0 0 20px;
+    border-left: 4px solid var(--accent);
+    background: rgba(88, 166, 255, 0.08);
+    font-size: 14px;
+  }
+  .callout-warn {
+    border-left-color: var(--orange);
+    background: rgba(210, 153, 34, 0.08);
+  }
+  .callout-tip {
+    border-left-color: var(--green);
+    background: rgba(63, 185, 80, 0.08);
+  }
+
+  /* Badge */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .badge-green { background: rgba(63, 185, 80, 0.2); color: var(--green); }
+  .badge-blue { background: rgba(88, 166, 255, 0.2); color: var(--accent); }
+  .badge-purple { background: rgba(188, 140, 255, 0.2); color: var(--purple); }
+
+  /* Parameter grid */
+  .params dt {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    margin-top: 12px;
+  }
+  .params dd {
+    margin-left: 0;
+    padding-left: 16px;
+    border-left: 2px solid var(--border);
+    margin-bottom: 8px;
+    color: var(--text-dim);
+  }
+
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .content { padding: 24px 20px 96px; }
+    h1 { font-size: 28px; }
+    h2 { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h1>NoopJS</h1>
+      <div class="tagline">Zero-runtime signal-based web framework</div>
+    </div>
+    <nav>
+      <div class="nav-section">
+        <div class="nav-section-title">Getting Started</div>
+        <a href="#introduction" class="nav-item active">Introduction</a>
+        <a href="#installation" class="nav-item">Installation</a>
+        <a href="#quick-start" class="nav-item">Quick Start</a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">Core Concepts</div>
+        <a href="#signals" class="nav-item">Signals</a>
+        <a href="#components" class="nav-item">Components</a>
+        <a href="#aethercss" class="nav-item">NoopCSS</a>
+        <a href="#event-handlers" class="nav-item">Event Handlers</a>
+        <a href="#lists" class="nav-item">Lists &amp; Conditionals</a>
+        <a href="#context" class="nav-item">Context &amp; Portals</a>
+        <a href="#lifecycle" class="nav-item">Lifecycle Hooks</a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">Integration</div>
+        <a href="#tailwind" class="nav-item">Tailwind CSS</a>
+        <a href="#custom-elements" class="nav-item">Custom Elements</a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">Server-Side Rendering</div>
+        <a href="#ssr-overview" class="nav-item">Overview</a>
+        <a href="#ssr-setup" class="nav-item">Setup</a>
+        <a href="#ssr-routing" class="nav-item">Routing</a>
+        <a href="#ssr-streaming" class="nav-item">Streaming</a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">Tooling</div>
+        <a href="#vite-plugin" class="nav-item">Vite Plugin</a>
+        <a href="#cli" class="nav-item">CLI</a>
+        <a href="#create-noopjs" class="nav-item">create-noopjs</a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">Reference</div>
+        <a href="#api-reference" class="nav-item">API Reference</a>
+        <a href="#compiler-api" class="nav-item">Compiler API</a>
+      </div>
+    </nav>
+  </aside>
+
+  <main class="content">
+
+    <!-- ──────────────────── INTRODUCTION ──────────────────── -->
+    <section id="introduction">
+      <h1>NoopJS</h1>
+      <p>
+        NoopJS is a <strong>zero-runtime, resumable, signal-based web framework</strong>.
+        It compiles your components into vanilla JavaScript that creates DOM nodes directly —
+        no Virtual DOM, no diffing, no framework overhead on the client.
+      </p>
+
+      <h3>Core Principles</h3>
+      <ul>
+        <li><strong>No Virtual DOM</strong> — The compiler generates direct DOM creation and fine-grained signal-driven updates.</li>
+        <li><strong>Resumability, Not Hydration</strong> — Server-rendered pages resume on the client without re-running component code. The reactive graph is serialized and re-attached.</li>
+        <li><strong>Zero Runtime</strong> — Pages with no interactivity ship zero framework JavaScript. Interactive islands ship only the minimal resumer (~1.5 KB) and exact handler code.</li>
+        <li><strong>TC39 Signals</strong> — Fine-grained reactivity via <code>signal</code>, <code>computed</code>, and <code>effect</code> following the TC39 proposal semantics.</li>
+        <li><strong>Platform Native</strong> — Uses browser primitives: Custom Elements, View Transitions API, Fetch, ReadableStream.</li>
+      </ul>
+
+      <div class="callout">
+        Aether is currently in early development. The APIs are stable but expect iteration as we approach 1.0.
+      </div>
+    </section>
+
+    <!-- ──────────────────── INSTALLATION ──────────────────── -->
+    <section id="installation">
+      <h2>Installation</h2>
+      <p>Aether is a monorepo published as several packages on npm:</p>
+      <pre><code># Core packages
+npm install @noopjs/compiler @noopjs/signals @noopjs/runtime @noopjs/client
+
+# Build tooling
+npm install @noopjs/vite @noopjs/css
+
+# Server-side rendering
+npm install @noopjs/server
+
+# CLI (optional)
+npm install @noopjs/cli</code></pre>
+
+      <p>For a new project, the fastest way is to use the CLI:</p>
+      <pre><code>npx @noopjs/create-noopjs
+# or
+npm create @noopjs</code></pre>
+
+      <p>Or add Aether to an existing Vite project:</p>
+      <pre><code>npm install @noopjs/vite @noopjs/compiler @noopjs/signals @noopjs/runtime @noopjs/css
+# vite.config.ts
+import { defineConfig } from 'vite';
+import { noopVite } from '@noopjs/vite';
+
+export default defineConfig({
+  plugins: [noopVite()]
+});</code></pre>
+    </section>
+
+    <!-- ──────────────────── QUICK START ──────────────────── -->
+    <section id="quick-start">
+      <h2>Quick Start</h2>
+      <p>Create a counter component (<code>src/counter.noop.tsx</code>):</p>
+      <pre><code>import { signal } from '@noopjs/signals';
+
+export const styles = {
+  container: { padding: '16px', textAlign: 'center' },
+  count:    { fontSize: '24px', fontWeight: 'bold' },
+  button:   { padding: '8px 16px', cursor: 'pointer' },
+};
+
+export default function Counter() {
+  const count = signal(0);
+  return (
+    &lt;div className={styles.container}&gt;
+      &lt;p className={styles.count}&gt;{count}&lt;/p&gt;
+      &lt;button className={styles.button} onClick={() =&gt; count.set(count.get() + 1)}&gt;
+        Increment
+      &lt;/button&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+
+      <p>Mount it (<code>src/main.ts</code>):</p>
+      <pre><code>import Counter from './counter.aether';
+
+const root = document.getElementById('root');
+root!.appendChild(Counter());</code></pre>
+
+      <p>Add the Vite plugin (<code>vite.config.ts</code>):</p>
+      <pre><code>import { defineConfig } from 'vite';
+import { noopVite } from '@noopjs/vite';
+
+export default defineConfig({
+  plugins: [noopVite()]
+});</code></pre>
+
+      <p>Start dev server:</p>
+      <pre><code>npx vite</code></pre>
+
+      <div class="callout callout-tip">
+        The <code>.noop.tsx</code> extension tells the plugin to compile this file.
+        Standard <code>.tsx</code> files are left untouched.
+      </div>
+    </section>
+
+    <!-- ──────────────────── SIGNALS ──────────────────── -->
+    <section id="signals">
+      <h2>Signals</h2>
+      <p>
+        Aether uses <strong>signals</strong> as its sole reactivity primitive, following the
+        <a href="https://github.com/tc39/proposal-signals">TC39 Signals proposal</a>.
+        Signals are values that can be read, written, and observed for changes.
+      </p>
+
+      <h3>signal</h3>
+      <p>Creates a writable reactive value:</p>
+      <pre><code>import { signal } from '@noopjs/signals';
+
+const count = signal(0);
+count.get();         // 0
+count.set(1);
+count.get();         // 1</code></pre>
+
+      <h3>computed</h3>
+      <p>Creates a derived value that re-evaluates lazily when dependencies change:</p>
+      <pre><code>import { signal, computed } from '@noopjs/signals';
+
+const count = signal(3);
+const doubled = computed(() => count.get() * 2);
+count.set(5);
+doubled.get();       // 10 (re-evaluated lazily)</code></pre>
+
+      <h3>effect</h3>
+      <p>Runs a function whenever its signal dependencies change. Returns a disposer function:</p>
+      <pre><code>import { signal, effect } from '@noopjs/signals';
+
+const count = signal(0);
+const dispose = effect(() => {
+  console.log('Count:', count.get());
+});
+count.set(1);        // logs: Count: 1
+dispose();           // stops the effect</code></pre>
+
+      <h3>batch</h3>
+      <p>Multiple signal writes within a <code>batch</code> trigger effects only once:</p>
+      <pre><code>import { signal, effect, batch } from '@noopjs/signals';
+
+const a = signal(1);
+const b = signal(2);
+
+effect(() => console.log(a.get() + b.get()));
+
+batch(() => {
+  a.set(10);
+  b.set(20);
+});                  // logs: 30 (once, not twice)</code></pre>
+
+      <h3>untrack</h3>
+      <p>Reads a signal without creating a dependency:</p>
+      <pre><code>import { signal, effect, untrack } from '@noopjs/signals';
+
+const x = signal(1);
+const y = signal(2);
+
+effect(() => {
+  console.log(x.get(), untrack(() => y.get()));
+});                  // re-runs only when x changes</code></pre>
+
+      <h3>readonly</h3>
+      <p>Exposes a signal as read-only (only <code>.get()</code>):</p>
+      <pre><code>import { signal, readonly } from '@noopjs/signals';
+
+const counter = signal(0);
+const readOnly = readonly(counter);
+readOnly.get();      // 0
+readOnly.set();      // throws</code></pre>
+    </section>
+
+    <!-- ──────────────────── COMPONENTS ──────────────────── -->
+    <section id="components">
+      <h2>Components</h2>
+      <p>
+        Aether components are <strong>plain functions</strong> that return DOM nodes.
+        They are compiled at build time — the source you write is never shipped as-is to the browser.
+      </p>
+
+      <h3>Basic Component</h3>
+      <pre><code>// src/greeting.noop.tsx
+export default function Greeting(props: { name: string }) {
+  return &lt;div&gt;Hello, {props.name}!&lt;/div&gt;;
+}</code></pre>
+
+      <h3>Composing Components</h3>
+      <p>Components render other components by calling them directly:</p>
+      <pre><code>import { signal } from '@noopjs/signals';
+import Greeting from './greeting.aether';
+
+export default function App() {
+  const name = signal('World');
+  return (
+    &lt;div&gt;
+      &lt;Greeting name={name.get()} /&gt;
+      &lt;input value={name.get()} onInput={(e) =&gt; name.set(e.target.value)} /&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+
+      <h3>Async Components</h3>
+      <p>Components can be <code>async</code>. Aether handles this during SSR and client rendering:</p>
+      <pre><code>export default async function AsyncPage(props: { slug: string }) {
+  const data = await fetchData(props.slug);
+  return &lt;div&gt;{data.title}&lt;/div&gt;;
+}</code></pre>
+
+      <h3>Dynamic Values</h3>
+      <p>When a signal is used in JSX, the DOM updates automatically:</p>
+      <pre><code>const count = signal(0);
+return &lt;p&gt;Count: {count}&lt;/p&gt;;
+
+// The compiler generates:
+// const txt = document.createTextNode('Count: ');
+// bindText(txt, () => 'Count: ' + count.get());</code></pre>
+
+      <div class="callout callout-warn">
+        Components must be <strong>default exports</strong> of <code>.noop.tsx</code> files.
+        Named exports are not yet supported for components.
+      </div>
+    </section>
+
+    <!-- ──────────────────── AETHERCSS ──────────────────── -->
+    <section id="aethercss">
+      <h2>NoopCSS — Atomic CSS System</h2>
+      <p>
+        NoopCSS extracts static style objects into atomic CSS classes at build time.
+        Each CSS property-value pair becomes a single, deterministic class.
+        Zero runtime overhead — no CSS-in-JS execution on the client.
+      </p>
+
+      <h3>Defining Styles</h3>
+      <pre><code>export const styles = {
+  container: {
+    background: '#1a1a2e',
+    padding: '16px',
+    borderRadius: '8px',
+    display: 'flex',
+    gap: '12px',
+  },
+  title: {
+    fontSize: '24px',
+    fontWeight: 700,
+    color: '#e6edf3',
+  },
+  button: {
+    padding: '8px 16px',
+    cursor: 'pointer',
+  },
+};</code></pre>
+
+      <h3>Using Styles</h3>
+      <pre><code>export default function Card() {
+  return (
+    &lt;div className={styles.container}&gt;
+      &lt;h2 className={styles.title}&gt;Hello&lt;/h2&gt;
+      &lt;button className={styles.button}&gt;Click&lt;/button&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+
+      <p>
+        The <code>extractStyles</code> function in <code>@noopjs/css</code> processes the source at build time:
+      </p>
+      <ul>
+        <li>Each <code>property: value</code> pair is hashed to a short class name (e.g., <code>_a3f8b2</code>).</li>
+        <li>The <code>export const styles</code> block is removed from the output.</li>
+        <li>A CSS file is generated with the atomic rules.</li>
+        <li>References to <code>styles.x</code> in JSX <code>className</code> are replaced with the generated class string.</li>
+      </ul>
+
+      <h3>Numeric Values</h3>
+      <p>Numeric values automatically get <code>px</code> appended:</p>
+      <pre><code>{ padding: 16 }        // → padding: 16px
+{ fontSize: 24 }       // → font-size: 24px
+{ gap: 8 }             // → gap: 8px</code></pre>
+
+      <h3>Inline Styles</h3>
+      <p>
+        Dynamic inline styles (with signals or expressions) use <code>bindStyle</code> at runtime.
+        Static inline styles (all literal values) are extracted to atomic classes at build time.
+      </p>
+      <pre><code>// Static — compiled to atomic CSS
+&lt;div style={{ color: 'red', padding: 8 }} /&gt;
+
+// Dynamic — uses bindStyle at runtime
+&lt;div style={() =&gt; ({ color: active.get() ? 'green' : 'red' })} /&gt;</code></pre>
+    </section>
+
+    <!-- ──────────────────── EVENT HANDLERS ──────────────────── -->
+    <section id="event-handlers">
+      <h2>Event Handlers</h2>
+      <p>
+        Event handlers in Aether use <strong>event delegation</strong>.
+        The <code>onClick</code>/<code>onInput</code>/etc. props register handlers via <code>bindEvent</code>,
+        which sets a <code>data-noop-ev</code> attribute and delegates through a global listener.
+      </p>
+
+      <pre><code>export default function Counter() {
+  const count = signal(0);
+  return (
+    &lt;div&gt;
+      &lt;p&gt;{count}&lt;/p&gt;
+      &lt;button onClick={() =&gt; count.set(count.get() + 1)}&gt;+&lt;/button&gt;
+      &lt;button onClick={() =&gt; count.set(count.get() - 1)}&gt;-&lt;/button&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+
+      <h3>Handler Extraction (Code Splitting)</h3>
+      <p>
+        When <code>extractHandlers: true</code> (default in production builds), each event handler is
+        extracted into its own JavaScript chunk. Handlers are loaded <strong>lazily on first interaction</strong>.
+        Pages with zero handlers ship zero JavaScript.
+      </p>
+
+      <div class="callout callout-tip">
+        The first click on a handler-triggering element fetches the handler chunk, then the handler fires.
+        Subsequent clicks are instant — the chunk is cached.
+      </div>
+
+      <h3>Available Events</h3>
+      <p>All standard DOM events are supported via <code>on{Event}</code> props: <code>onClick</code>, <code>onInput</code>, <code>onSubmit</code>, <code>onMouseEnter</code>, <code>onFocus</code>, <code>onBlur</code>, etc.</p>
+    </section>
+
+    <!-- ──────────────────── LISTS & CONDITIONALS ──────────────────── -->
+    <section id="lists">
+      <h2>Lists &amp; Conditionals</h2>
+
+      <h3>Conditional Rendering</h3>
+      <pre><code>export default function Toggle() {
+  const show = signal(false);
+  return (
+    &lt;div&gt;
+      &lt;button onClick={() =&gt; show.set(!show.get())}&gt;Toggle&lt;/button&gt;
+      {show.get() ? &lt;p&gt;Visible&lt;/p&gt; : null}
+    &lt;/div&gt;
+  );
+}</code></pre>
+
+      <p>The compiler handles <code>condition ? &lt;A /&gt; : &lt;B /&gt;</code>, <code>expr &amp;&amp; &lt;JSX /&gt;</code>, and <code>expr || &lt;JSX /&gt;</code> patterns.</p>
+
+      <h3>List Rendering</h3>
+      <p>Use <code>.map()</code> for simple lists:</p>
+      <pre><code>export default function List() {
+  const items = signal(['a', 'b', 'c']);
+  return (
+    &lt;ul&gt;
+      {items.get().map(item => &lt;li&gt;{item}&lt;/li&gt;)}
+    &lt;/ul&gt;
+  );
+}</code></pre>
+
+      <p>
+        The compiler replaces <code>.map()</code> with <code>__noopEach()</code> for unkeyed lists,
+        or <code>__noopReconcile()</code> when a <code>key</code> prop is present (keyed reconciliation).
+        This ensures efficient DOM updates when the array changes.
+      </p>
+
+      <pre><code>// Keyed list — efficient updates when items change
+{items.get().map(item => (
+  &lt;li key={item.id}&gt;{item.name}&lt;/li&gt;
+))}</code></pre>
+    </section>
+
+    <!-- ──────────────────── CONTEXT & PORTALS ──────────────────── -->
+    <section id="context">
+      <h2>Context &amp; Portals</h2>
+
+      <h3>Context</h3>
+      <p>Share data through the component tree without prop drilling:</p>
+      <pre><code>import { createContext, useContext } from '@noopjs/runtime';
+
+const ThemeContext = createContext('light');
+
+function ThemedButton() {
+  const theme = useContext(ThemeContext);
+  return &lt;button className={theme === 'dark' ? 'dark' : 'light'}&gt;Click&lt;/button&gt;;
+}
+
+export default function App() {
+  return (
+    &lt;ThemeContext.Provider value="dark"&gt;
+      &lt;ThemedButton /&gt;
+    &lt;/ThemeContext.Provider&gt;
+  );
+}</code></pre>
+
+      <h3>Portals / Teleport</h3>
+      <p>Render content into a different DOM location:</p>
+      <pre><code>import { createPortal } from '@noopjs/runtime';
+
+export default function Modal() {
+  return createPortal(
+    &lt;div className="modal"&gt;...&lt;/div&gt;,
+    document.body
+  );
+}</code></pre>
+
+      <p>The target can be a CSS selector string, an <code>Element</code>, or a function returning an element.</p>
+    </section>
+
+    <!-- ──────────────────── LIFECYCLE ──────────────────── -->
+    <section id="lifecycle">
+      <h2>Lifecycle Hooks</h2>
+
+      <table>
+        <tr><th>Hook</th><th>Description</th></tr>
+        <tr><td><code>onMount(fn)</code></td><td>Runs after the component is mounted to the DOM</td></tr>
+        <tr><td><code>onUpdate(deps, fn)</code></td><td>Runs when any dependency signal changes</td></tr>
+        <tr><td><code>onUnmount(fn)</code></td><td>Registers a cleanup function for unmount</td></tr>
+        <tr><td><code>startEffectCleanup()</code></td><td>Starts a MutationObserver to auto-dispose effects on DOM removal</td></tr>
+        <tr><td><code>stopEffectCleanup()</code></td><td>Stops the effect cleanup observer</td></tr>
+      </table>
+
+      <pre><code>import { signal, effect } from '@noopjs/signals';
+import { onMount, onUnmount } from '@noopjs/runtime';
+
+export default function Timer() {
+  const elapsed = signal(0);
+  let interval;
+
+  onMount(() => {
+    interval = setInterval(() => elapsed.set(elapsed.get() + 1), 1000);
+  });
+
+  onUnmount(() => {
+    clearInterval(interval);
+  });
+
+  return &lt;p&gt;{elapsed} seconds&lt;/p&gt;;
+}</code></pre>
+
+      <h3>Transition Hooks</h3>
+      <p>For animation on element enter/leave:</p>
+      <pre><code>import { onEnter, onLeave } from '@noopjs/runtime';
+
+export default function Animated() {
+  return (
+    &lt;div
+      onBeforeEnter={el => { el.style.opacity = '0'; }}
+      onEnter={el => { el.style.opacity = '1'; }}
+      onLeave={(el, done) => {
+        el.style.opacity = '0';
+        el.addEventListener('transitionend', done);
+      }}
+    &gt;
+      Content
+    &lt;/div&gt;
+  );
+}</code></pre>
+    </section>
+
+    <!-- ──────────────────── TAILWIND ──────────────────── -->
+    <section id="tailwind">
+      <h2>Tailwind CSS Integration</h2>
+      <p>
+        Aether provides a first-class integration with <strong>Tailwind CSS v4</strong>.
+        The <code>createTailwindResolver</code> function converts spacing-scale token values
+        (like <code>token.spacing.6</code>) to their Tailwind utility equivalents (like <code>p-6</code>).
+      </p>
+
+      <h3>Setup</h3>
+      <pre><code>npm install tailwindcss @tailwindcss/vite
+npm install @noopjs/vite @noopjs/compiler</code></pre>
+
+      <pre><code>// vite.config.ts
+import { defineConfig } from 'vite';
+import tailwindcss from '@tailwindcss/vite';
+import { noopVite } from '@noopjs/vite';
+import { createTailwindResolver } from '@noopjs/compiler';
+
+export default defineConfig({
+  plugins: [
+    tailwindcss(),                    // Tailwind JIT
+    noopVite({
+      tokenResolvers: [createTailwindResolver()],
+    }),
+  ],
+});</code></pre>
+
+      <h3>Usage</h3>
+      <p>Use <code>token.spacing.*</code> and <code>token.color.*</code> in style objects:</p>
+      <pre><code>import { token } from '@noopjs/runtime';
+
+const styles = {
+  card: {
+    padding: token.spacing[6],   // → class includes "p-6"
+    gap: token.spacing[4],       // → class includes "gap-4"
+  },
+  hero: {
+    paddingTop: token.spacing[20], // → class includes "pt-20"
+    color: token.color.blue[500],  // → class includes "text-blue-500"
+  },
+};</code></pre>
+
+      <h3>CSS Entry</h3>
+      <p>Your stylesheet needs to import Tailwind and source the generated utilities:</p>
+      <pre><code>/* src/style.css */
+@import "tailwindcss";
+
+/* Safelist any classes generated dynamically */
+@source "../safelist/";</code></pre>
+
+      <h3>Safelist Pattern</h3>
+      <p>
+        Because Tailwind's JIT scans source files to generate CSS, dynamically-resolved utility class names
+        (like <code>p-6</code>, <code>gap-4</code>) need to appear in scanned files. Create a safelist:
+      </p>
+      <pre><code>&lt;!-- src/safelist/index.html --&gt;
+&lt;div class="p-6 p-4 p-8 p-12 p-16 p-20 gap-6 gap-4 gap-8 gap-12
+            pt-4 pt-6 pt-8 pt-12 pt-16 pt-20 pb-4 mb-8
+            text-blue-500 text-gray-300 text-gray-400"&gt;&lt;/div&gt;</code></pre>
+
+      <div class="callout callout-warn">
+        The safelist is needed because Tailwind v4 scans source files for class name strings.
+        Since token resolution happens during Aether's compilation step (not in Tailwind's scan),
+        the generated class names must exist in files Tailwind can see.
+      </div>
+
+      <h3>Supported Properties</h3>
+      <p><code>createTailwindResolver</code> handles spacing-scale properties:</p>
+      <ul>
+        <li><code>padding</code>, <code>paddingLeft</code>, <code>paddingRight</code>, <code>paddingTop</code>, <code>paddingBottom</code></li>
+        <li><code>margin</code>, <code>marginLeft</code>, <code>marginRight</code>, <code>marginTop</code>, <code>marginBottom</code></li>
+        <li><code>gap</code>, <code>columnGap</code>, <code>rowGap</code></li>
+        <li><code>width</code>, <code>height</code>, <code>minWidth</code>, <code>maxWidth</code>, <code>minHeight</code>, <code>maxHeight</code></li>
+        <li><code>borderRadius</code></li>
+        <li><code>top</code>, <code>right</code>, <code>bottom</code>, <code>left</code></li>
+        <li><code>outlineWidth</code>, <code>outlineOffset</code></li>
+        <li>Color properties (<code>color</code>, <code>backgroundColor</code>, <code>borderColor</code>) map to Tailwind text/border/bg utilities</li>
+      </ul>
+
+      <h3>Custom Token Resolvers</h3>
+      <p>You can create your own token resolvers for design systems:</p>
+      <pre><code>import type { TokenResolver } from '@noopjs/compiler';
+
+const myResolver: TokenResolver = {
+  name: 'my-design-system',
+  resolve(prop, value) {
+    if (prop === 'color' && value.startsWith('brand-')) {
+      return `text-${value}`;
+    }
+    return null; // fall through to other resolvers
+  },
+};</code></pre>
+    </section>
+
+    <!-- ──────────────────── CUSTOM ELEMENTS ──────────────────── -->
+    <section id="custom-elements">
+      <h2>Custom Elements (Web Components)</h2>
+      <p>
+        Aether components can be exported as <strong>native Custom Elements</strong>,
+        usable in any HTML page without Aether.
+      </p>
+
+      <h3>Creating a Custom Element</h3>
+      <p>Add the <code>@aether customElement</code> directive at the top of your component file:</p>
+      <pre><code>// @aether customElement 'my-counter'
+import { signal } from '@noopjs/signals';
+
+export default function MyCounter() {
+  const count = signal(0);
+  return (
+    &lt;div&gt;
+      &lt;p&gt;{count}&lt;/p&gt;
+      &lt;button onClick={() =&gt; count.set(count.get() + 1)}&gt;+&lt;/button&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+
+      <p>The compiler generates a wrapper class that extends <code>HTMLElement</code>:</p>
+      <pre><code>&lt;my-counter&gt;&lt;/my-counter&gt;
+
+&lt;script&gt;
+const el = document.querySelector('my-counter');
+el.innerHTML; // Contains the component's DOM
+&lt;/script&gt;</code></pre>
+
+      <p>Custom elements can be used in any framework or plain HTML.</p>
+    </section>
+
+    <!-- ──────────────────── SSR ──────────────────── -->
+    <section id="ssr-overview">
+      <h2>SSR — Server-Side Rendering</h2>
+      <p>
+        Aether's SSR renders components to HTML on the server, serializes the reactive graph,
+        and sends it to the client. The client <strong>resumes</strong> the signal graph without
+        re-running component code — true resumability, not hydration.
+      </p>
+
+      <h3>How It Works</h3>
+      <ol>
+        <li><strong>SSR Context</strong> — A fake DOM (<code>ServerDocument</code>/<code>ServerElement</code>/<code>ServerTextNode</code>) replaces the real <code>document</code>.</li>
+        <li><strong>Render</strong> — The component function runs, creating DOM nodes on the shim. Runtime functions detect SSR mode and record bindings instead of creating effects.</li>
+        <li><strong>Serialize</strong> — The render result includes: HTML string, signal state values, binding descriptors, and handler metadata.</li>
+        <li><strong>Client Resume</strong> — The <code>@noopjs/client</code> script reads the serialized state, recreates signals at their SSR values, re-attaches bindings via effects, and sets up event delegation.</li>
+      </ol>
+    </section>
+
+    <section id="ssr-setup">
+      <h2>SSR — Setup</h2>
+
+      <h3>Server Entry</h3>
+      <pre><code>// src/entry-server.ts
+import { renderToString } from '@noopjs/server';
+import Counter from './counter.aether';
+
+export async function render() {
+  const { html, state } = await renderToString(Counter);
+  return { html, state };
+}</code></pre>
+
+      <h3>Full Server Example (Node.js + Express)</h3>
+      <pre><code>// server.ts
+import express from 'express';
+import { createExpressMiddleware } from '@noopjs/server';
+import { noopVite } from '@noopjs/vite';
+import { createServer } from 'vite';
+import Counter from './src/counter.aether';
+
+const app = express();
+
+// Dev: use Vite middleware for HMR + compilation
+const vite = await createServer({
+  server: { middlewareMode: true },
+  plugins: [noopVite()],
+});
+app.use(vite.middlewares);
+
+// SSR route
+app.get('/', async (req, res) => {
+  const { html, state } = await renderToString(Counter);
+  res.send(`
+    &lt;!DOCTYPE html&gt;
+    &lt;html&gt;
+    &lt;head&gt;&lt;title&gt;Aether SSR&lt;/title&gt;&lt;/head&gt;
+    &lt;body&gt;
+      &lt;div id="root"&gt;${html}&lt;/div&gt;
+      &lt;script id="__NOOP_STATE__" type="application/json"&gt;
+        ${JSON.stringify(state)}
+      &lt;/script&gt;
+      &lt;script type="module" src="/src/main.ts"&gt;&lt;/script&gt;
+    &lt;/body&gt;
+    &lt;/html&gt;
+  `);
+});
+
+app.listen(3000);</code></pre>
+
+      <h3>Client Entry</h3>
+      <pre><code>// src/main.ts
+import '@noopjs/client';   // auto-invokes init() on DOMContentLoaded</code></pre>
+
+      <p>
+        The <code>@noopjs/client</code> import automatically reads <code>__NOOP_STATE__</code> from the DOM,
+        recreates signals, attaches bindings, and sets up the SPA router.
+      </p>
+    </section>
+
+    <section id="ssr-routing">
+      <h2>SSR — Routing</h2>
+      <p>
+        Aether supports <strong>file-based routing</strong> via <code>@noopjs/server</code>'s <code>buildRoutes</code> utility,
+        plus client-side SPA navigation via <code>@noopjs/client</code>'s <code>navigate</code>.
+      </p>
+
+      <h3>File Conventions</h3>
+      <table>
+        <tr><th>File</th><th>Route</th></tr>
+        <tr><td><code>src/routes/index.noop.tsx</code></td><td><code>/</code></td></tr>
+        <tr><td><code>src/routes/about.noop.tsx</code></td><td><code>/about</code></td></tr>
+        <tr><td><code>src/routes/blog/[slug].noop.tsx</code></td><td><code>/blog/:slug</code></td></tr>
+        <tr><td><code>src/routes/dashboard/layout.noop.tsx</code></td><td>Layout wrapper for nested routes</td></tr>
+        <tr><td><code>src/routes/dashboard/page.noop.tsx</code></td><td><code>/dashboard</code></td></tr>
+      </table>
+
+      <h3>Programmatic Routes</h3>
+      <p>For full control, define routes in your server entry:</p>
+      <pre><code>import { matchRoute, buildRoutes } from '@noopjs/server';
+
+const routes = buildRoutes(path.resolve(__dirname, 'src/routes'));
+
+app.get('/*', async (req, res) => {
+  const match = matchRoute(req.path, routes);
+  if (!match) { res.status(404).send('Not found'); return; }
+
+  const { route, params } = match;
+  const mod = await import(route.filePath);
+  const { html, state } = await renderToString(mod.default, params);
+  res.send(fullHTML(html, state));
+});</code></pre>
+
+      <h3>Client-Side Navigation</h3>
+      <p>
+        <code>@noopjs/client</code> intercepts <code>&lt;a&gt;</code> clicks, fetches JSON from the server
+        (with <code>X-Noop-Navigate: 1</code> header), and swaps the DOM using
+        <code>document.startViewTransition</code> when available.
+      </p>
+      <pre><code>// Manual navigation (e.g., from a button)
+import { navigate } from '@noopjs/client';
+
+navigate('/about');  // fetches, swaps DOM, pushes history</code></pre>
+
+      <h3>Prefetching</h3>
+      <p>Links within viewport are automatically prefetched via <code>prefetchUrl</code>:</p>
+      <pre><code>import { prefetchUrl, resetPrefetchCache } from '@noopjs/client';
+
+// Prefetch a page manually
+prefetchUrl('/blog/hello-noop');</code></pre>
+    </section>
+
+    <section id="ssr-streaming">
+      <h2>SSR — Streaming</h2>
+      <p>
+        For larger pages, Aether supports <strong>streaming SSR</strong> with Suspense boundaries.
+        The HTML shell is sent immediately, and content is streamed as it resolves.
+      </p>
+      <pre><code>import { renderToStream } from '@noopjs/server';
+import { Suspense } from '@noopjs/runtime';
+
+export default function Page() {
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;My Page&lt;/h1&gt;
+      &lt;Suspense fallback={&lt;div&gt;Loading...&lt;/div&gt;}&gt;
+        {() =&gt; fetchSlowData().then(data =&gt; &lt;div&gt;{data}&lt;/div&gt;)}
+      &lt;/Suspense&gt;
+    &lt;/div&gt;
+  );
+}
+
+// Server sends headers + shell immediately, then streams content
+const stream = await renderToStream(Page);
+stream.pipeTo(new WritableStream({ write(chunk) { res.write(chunk); } }));</code></pre>
+
+      <h3>Caching</h3>
+      <pre><code>import { cacheRender } from '@noopjs/server';
+
+const result = cacheRender({ ttl: 60000, key: 'homepage' }, () =>
+  renderToString(HomePage)
+);</code></pre>
+    </section>
+
+    <!-- ──────────────────── VITE PLUGIN ──────────────────── -->
+    <section id="vite-plugin">
+      <h2>Vite Plugin ( <code>@noopjs/vite</code> )</h2>
+      <p>
+        The Vite plugin is the primary build tool integration. It compiles <code>.noop.tsx</code> files,
+        extracts CSS, and handles handler code splitting.
+      </p>
+
+      <h3>Configuration</h3>
+      <pre><code>import { defineConfig } from 'vite';
+import { noopVite } from '@noopjs/vite';
+import { createTailwindResolver } from '@noopjs/compiler';
+
+export default defineConfig({
+  plugins: [
+    noopVite({
+      cssMode: 'atomic',           // 'atomic' | 'inline' (default: 'atomic')
+      extractHandlers: true,       // extract handlers to separate chunks (default: true in build)
+      tokenResolvers: [            // optional token resolvers (Tailwind, custom)
+        createTailwindResolver(),
+      ],
+    }),
+  ],
+});</code></pre>
+
+      <h3>CSS Modes</h3>
+      <table>
+        <tr><th>Mode</th><th>Description</th></tr>
+        <tr><td><code>atomic</code> (default)</td><td>Runs <code>extractStyles()</code> to convert <code>export const styles</code> into atomic CSS classes, then compiles. CSS is served via virtual module.</td></tr>
+        <tr><td><code>inline</code></td><td>Compiles without CSS extraction. Inline <code>style={{...}}</code> objects are collected and returned as CSS.</td></tr>
+      </table>
+
+      <h3>How It Works</h3>
+      <ol>
+        <li><strong>resolveId</strong> — Resolves virtual CSS modules (<code>\0noop-css:</code>) and handler modules (<code>\0noop-handler:</code>).</li>
+        <li><strong>transform</strong> — Matches <code>*.noop.tsx</code> files, compiles them, extracts CSS in atomic mode, registers handlers.</li>
+        <li><strong>load</strong> — Returns virtual CSS content and handler chunk code.</li>
+        <li><strong>renderChunk</strong> — Emits preload headers for handler chunks.</li>
+        <li><strong>handleHotUpdate</strong> — Forces full re-load for <code>.noop.*</code> files on change.</li>
+      </ol>
+    </section>
+
+    <!-- ──────────────────── CLI ──────────────────── -->
+    <section id="cli">
+      <h2>CLI ( <code>@noopjs/cli</code> )</h2>
+      <p>
+        The Aether CLI wraps Vite and provides project management commands.
+      </p>
+
+      <pre><code>npx @noopjs/cli [command]</code></pre>
+
+      <h3>Commands</h3>
+      <table>
+        <tr><th>Command</th><th>Description</th></tr>
+        <tr><td><code>dev</code></td><td>Starts Vite dev server on port 3000 with <code>@noopjs/vite</code> plugin</td></tr>
+        <tr><td><code>build</code></td><td>Builds for production. If <code>src/entry-server.ts</code> exists, also builds SSR bundle to <code>dist/server/</code></td></tr>
+        <tr><td><code>preview</code></td><td>Previews production build</td></tr>
+        <tr><td><code>generate component &lt;name&gt;</code></td><td>Scaffolds <code>src/&lt;Name&gt;.noop.tsx</code></td></tr>
+        <tr><td><code>generate page &lt;name&gt;</code></td><td>Scaffolds <code>src/pages/&lt;Name&gt;.noop.tsx</code></td></tr>
+        <tr><td><code>analyze</code></td><td>Walks <code>dist/</code> and prints sorted bundle sizes</td></tr>
+        <tr><td><code>check</code></td><td>Compiles all <code>.noop.tsx</code>/<code>.noop.ts</code> files in <code>src/</code> and reports errors</td></tr>
+        <tr><td><code>init</code></td><td>Creates project structure (<code>src/</code>, <code>public/</code>), <code>package.json</code>, <code>index.html</code>, <code>src/main.noop.tsx</code></td></tr>
+      </table>
+
+      <h3>Examples</h3>
+      <pre><code># Start development
+npx aether dev
+
+# Build for production
+npx aether build
+
+# Check all .noop.tsx files for errors
+npx aether check
+
+# Generate a new component
+npx aether generate component MyButton
+
+# Analyze bundle sizes
+npx aether analyze</code></pre>
+    </section>
+
+    <!-- ──────────────────── CREATE AETHER ──────────────────── -->
+    <section id="create-noopjs">
+      <h2>create-noopjs</h2>
+      <p>
+        Scaffold a new Aether project:
+      </p>
+      <pre><code>npm create @noopjs
+# or
+npx @noopjs/create-noopjs</code></pre>
+
+      <p>You'll be prompted for:</p>
+      <ul>
+        <li>Project directory</li>
+        <li>Template: <code>counter</code>, <code>blog</code>, or <code>empty</code></li>
+        <li>Project name</li>
+      </ul>
+    </section>
+
+    <!-- ──────────────────── API REFERENCE ──────────────────── -->
+    <section id="api-reference">
+      <h2>API Reference</h2>
+
+      <h3><code>@noopjs/signals</code></h3>
+      <table>
+        <tr><th>Export</th><th>Signature</th><th>Description</th></tr>
+        <tr><td><code>signal</code></td><td><code>&lt;T&gt;(v: T): Signal&lt;T&gt;</code></td><td>Writable reactive value</td></tr>
+        <tr><td><code>computed</code></td><td><code>&lt;T&gt;(fn: () =&gt; T): Signal&lt;T&gt;</code></td><td>Lazy derived value, throws on .set()</td></tr>
+        <tr><td><code>effect</code></td><td><code>(fn: () =&gt; void): () =&gt; void</code></td><td>Runs fn, tracks deps, returns disposer</td></tr>
+        <tr><td><code>batch</code></td><td><code>&lt;T&gt;(fn: () =&gt; T): T</code></td><td>Batch multiple sets into one flush</td></tr>
+        <tr><td><code>untrack</code></td><td><code>&lt;T&gt;(fn: () =&gt; T): T</code></td><td>Run without tracking dependencies</td></tr>
+        <tr><td><code>readonly</code></td><td><code>&lt;T&gt;(s: Signal&lt;T&gt;): { get(): T }</code></td><td>Read-only signal wrapper</td></tr>
+      </table>
+
+      <h3><code>@noopjs/runtime</code></h3>
+      <table>
+        <tr><th>Export</th><th>Description</th></tr>
+        <tr><td><code>bindText(node, getter, signalRef?)</code></td><td>Binds a signal to a text node</td></tr>
+        <tr><td><code>bindAttribute(el, name, getter, signalRef?)</code></td><td>Binds a signal to an element attribute</td></tr>
+        <tr><td><code>bindStyle(el, getter, signalRef?)</code></td><td>Binds a signal to inline styles</td></tr>
+        <tr><td><code>bindEvent(el, eventType, handler, handlerId)</code></td><td>Registers an event handler with delegation</td></tr>
+        <tr><td><code>onMount(fn)</code></td><td>Run after DOM mount</td></tr>
+        <tr><td><code>onUpdate(deps, fn)</code></td><td>Run when dependencies change</td></tr>
+        <tr><td><code>onUnmount(fn)</code></td><td>Register cleanup for unmount</td></tr>
+        <tr><td><code>createContext(defaultValue)</code></td><td>Create a context with Provider</td></tr>
+        <tr><td><code>useContext(context)</code></td><td>Read current context value</td></tr>
+        <tr><td><code>createPortal(children, target)</code></td><td>Render to a different DOM location</td></tr>
+        <tr><td><code>Suspense</code></td><td>Suspense boundary component</td></tr>
+        <tr><td><code>ErrorBoundary</code></td><td>Error boundary component</td></tr>
+      </table>
+
+      <h3><code>@noopjs/compiler</code></h3>
+      <table>
+        <tr><th>Export</th><th>Description</th></tr>
+        <tr><td><code>compile(source, options?)</code></td><td>Compiles .noop.tsx to vanilla JS</td></tr>
+        <tr><td><code>createTailwindResolver()</code></td><td>Creates a Tailwind token resolver</td></tr>
+      </table>
+
+      <h3><code>@noopjs/client</code></h3>
+      <table>
+        <tr><th>Export</th><th>Description</th></tr>
+        <tr><td><code>init()</code></td><td>Auto-invoked on DOMContentLoaded, hydrates from state</td></tr>
+        <tr><td><code>initFromState(state)</code></td><td>Programmatic hydration from serialized state</td></tr>
+        <tr><td><code>applyState(newState)</code></td><td>Replace state (for SPA navigation)</td></tr>
+        <tr><td><code>navigate(href)</code></td><td>Client-side navigation</td></tr>
+        <tr><td><code>prefetchUrl(url)</code></td><td>Prefetch a page</td></tr>
+        <tr><td><code>resetPrefetchCache()</code></td><td>Clear prefetch cache</td></tr>
+      </table>
+
+      <h3><code>@noopjs/server</code></h3>
+      <table>
+        <tr><th>Export</th><th>Description</th></tr>
+        <tr><td><code>renderToString(componentFn, props?)</code></td><td>SSR: render to HTML + serialized state</td></tr>
+        <tr><td><code>renderToStream(componentFn, props?)</code></td><td>SSR: stream HTML with Suspense</td></tr>
+        <tr><td><code>createExpressMiddleware(componentFn)</code></td><td>Express-compatible SSR middleware</td></tr>
+        <tr><td><code>createNodeHandler(componentFn)</code></td><td>Raw Node.js http server handler</td></tr>
+        <tr><td><code>buildRoutes(routesDir)</code></td><td>Build route table from convention</td></tr>
+        <tr><td><code>matchRoute(url, routes)</code></td><td>Match URL to route</td></tr>
+        <tr><td><code>cacheRender(options, fn)</code></td><td>Cache SSR results</td></tr>
+      </table>
+
+      <h3><code>@noopjs/vite</code></h3>
+      <table>
+        <tr><th>Export</th><th>Description</th></tr>
+        <tr><td><code>noopVite(options?)</code></td><td>Vite plugin for Aether compilation</td></tr>
+      </table>
+    </section>
+
+    <!-- ──────────────────── COMPILER API ──────────────────── -->
+    <section id="compiler-api">
+      <h2>Compiler API</h2>
+      <p>
+        The compiler is used internally by the Vite plugin but can also be used standalone.
+      </p>
+
+      <pre><code>import { compile } from '@noopjs/compiler';
+
+const result = compile(source, {
+  filename: 'counter.noop.tsx',
+  extractHandlers: true,
+  sourceMaps: true,
+  tokenResolvers: [createTailwindResolver()],
+});
+
+console.log(result.code);     // compiled JavaScript
+console.log(result.css);      // collected CSS
+console.log(result.bindings); // SSR binding descriptors
+console.log(result.handlers); // extracted handler descriptors</code></pre>
+
+      <h3>CompileOptions</h3>
+      <dl class="params">
+        <dt>filename?: string</dt>
+        <dd>Source filename (used for source maps and component IDs)</dd>
+        <dt>extractHandlers?: boolean</dt>
+        <dd>If true, event handlers are extracted to separate modules for code splitting</dd>
+        <dt>sourceMaps?: boolean</dt>
+        <dd>Generate source maps for the compiled output</dd>
+        <dt>tokenResolvers?: TokenResolver[]</dt>
+        <dd>Array of resolvers for design token values (e.g., Tailwind)</dd>
+      </dl>
+
+      <h3>CompileResult</h3>
+      <dl class="params">
+        <dt>code: string</dt>
+        <dd>Transformed JavaScript output</dd>
+        <dt>map?: object</dt>
+        <dd>Source map (if sourceMaps: true)</dd>
+        <dt>bindings: BindingDescriptor[]</dt>
+        <dd>Signal-to-DOM binding descriptors for SSR resumption</dd>
+        <dt>componentId: string</dt>
+        <dd>Unique component identifier</dd>
+        <dt>css?: string</dt>
+        <dd>Collected CSS from inline style objects</dd>
+        <dt>handlers?: HandlerDescriptor[]</dt>
+        <dd>Extracted event handler metadata</dd>
+        <dt>customElementTag?: string</dt>
+        <dd>Custom element tag name (if @aether customElement directive is present)</dd>
+      </dl>
+
+      <h3>TokenResolver Interface</h3>
+      <pre><code>interface TokenResolver {
+  name: string;
+  resolve(prop: string, value: string): string | null;
+}</code></pre>
+      <p>
+        Return a class name string to replace the token value, or <code>null</code>
+        to let the next resolver (or default NoopCSS handling) process it.
+      </p>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  // Highlight active nav item on scroll
+  const sections = document.querySelectorAll('section[id]');
+  const navItems = document.querySelectorAll('.nav-item');
+
+  function updateActive() {
+    let current = '';
+    sections.forEach(section => {
+      const top = section.offsetTop - 120;
+      if (window.scrollY >= top) current = section.id;
+    });
+    navItems.forEach(item => {
+      item.classList.toggle('active', item.getAttribute('href') === '#' + current);
+    });
+  }
+
+  window.addEventListener('scroll', updateActive, { passive: true });
+  updateActive();
+
+  // Smooth scroll for nav links
+  navItems.forEach(item => {
+    item.addEventListener('click', e => {
+      e.preventDefault();
+      const target = document.querySelector(item.getAttribute('href'));
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      history.replaceState(null, '', item.getAttribute('href'));
+    });
+  });
+</script>
+</body>
+</html>

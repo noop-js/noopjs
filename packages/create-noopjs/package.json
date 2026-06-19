@@ -1,0 +1,19 @@
+{
+  "name": "create-noopjs",
+  "version": "0.5.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "create-noopjs": "./bin/create-noopjs.mjs"
+  },
+  "files": ["dist", "bin", "src/templates"],
+  "publishConfig": { "access": "public" },
+  "scripts": {
+    "build": "tsc && cp -r src/templates dist/templates"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.8.0"
+  }
+}

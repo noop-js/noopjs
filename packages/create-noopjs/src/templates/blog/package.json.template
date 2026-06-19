@@ -1,0 +1,23 @@
+{
+  "name": "{{name}}",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "ssr": "tsx server.ts"
+  },
+  "dependencies": {
+    "@aether/client": "^0.0.1",
+    "@aether/runtime": "^0.0.1",
+    "@aether/server": "^0.0.1",
+    "@aether/signals": "^0.0.1",
+    "@aether/vite": "^0.0.1",
+    "vite": "^6.0.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0",
+    "typescript": "^5.8.0"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "@noopjs/server",
+  "version": "0.5.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "publishConfig": { "access": "public" },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@noopjs/signals": "workspace:*",
+    "@noopjs/runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "@noopjs/client": "workspace:*",
+    "@noopjs/compiler": "workspace:*",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.1.0"
+  }
+}

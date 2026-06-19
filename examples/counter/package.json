@@ -1,0 +1,22 @@
+{
+  "name": "example-counter",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "ssr": "tsx server.ts"
+  },
+  "dependencies": {
+    "@noopjs/vite": "workspace:*",
+    "@noopjs/client": "workspace:*",
+    "@noopjs/server": "workspace:*",
+    "@noopjs/runtime": "workspace:*",
+    "@noopjs/signals": "workspace:*",
+    "vite": "^6.0.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0",
+    "typescript": "^5.8.0"
+  }
+}
