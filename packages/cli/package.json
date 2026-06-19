@@ -15,6 +15,9 @@
   "bin": {
     "noopjs": "./bin/noopjs.mjs"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "files": ["dist", "bin"],
   "scripts": {
     "build": "tsc",

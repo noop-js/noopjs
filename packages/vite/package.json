@@ -16,6 +16,7 @@
   "publishConfig": { "access": "public" },
   "scripts": {
     "build": "tsc",
+    "prepublishOnly": "tsc",
     "test": "vitest run",
     "test:watch": "vitest"
   },

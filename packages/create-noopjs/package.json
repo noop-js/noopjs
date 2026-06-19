@@ -11,7 +11,8 @@
   "files": ["dist", "bin", "src/templates"],
   "publishConfig": { "access": "public" },
   "scripts": {
-    "build": "tsc && cp -r src/templates dist/templates"
+    "build": "tsc && cp -r src/templates dist/templates",
+    "prepublishOnly": "tsc && cp -r src/templates dist/templates"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
