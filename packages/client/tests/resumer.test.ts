@@ -162,8 +162,8 @@ describe('client resumer', () => {
     });
 
     const g = globalThis as any;
-    expect(g.__aetherContextStack).toBeDefined();
-    expect(g.__aetherContextStack.get('Symbol(theme)')).toEqual(['dark']);
+    expect(g.__noopContextStack).toBeDefined();
+    expect(g.__noopContextStack.get('Symbol(theme)')).toEqual(['dark']);
   });
 
   it('disposes previous effects on re-init', () => {

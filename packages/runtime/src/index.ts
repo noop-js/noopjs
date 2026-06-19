@@ -6,8 +6,8 @@ function isSSR(): boolean {
 
 function isDev(): boolean {
   if (isSSR()) return false;
-  if ((globalThis as any).__AETHER_DEV === true) return true;
-  if ((globalThis as any).__AETHER_DEV === false) return false;
+  if ((globalThis as any).__NOOP_DEV === true) return true;
+  if ((globalThis as any).__NOOP_DEV === false) return false;
   try {
     return (import.meta as any).env?.MODE === 'development';
   } catch {
@@ -15,14 +15,14 @@ function isDev(): boolean {
   }
 }
 
-function aetherWarn(msg: string, ...args: any[]): void {
+function noopWarn(msg: string, ...args: any[]): void {
   if (isDev()) {
-    console.warn(`[Aether] ${msg}`, ...args);
+    console.warn(`[Noop] ${msg}`, ...args);
   }
 }
 
-function aetherError(msg: string, hint?: string): Error {
-  const error = new Error(`[Aether] ${msg}`);
+function noopError(msg: string, hint?: string): Error {
+  const error = new Error(`[Noop] ${msg}`);
   if (hint) error.message += `\n  💡 ${hint}`;
   return error;
 }
@@ -34,9 +34,9 @@ function getCtx(): any {
 let nodeIdCounter = 0;
 
 function ensureNodeId(el: any): string {
-  if (el._aetherNodeId) return el._aetherNodeId;
+  if (el._noopNodeId) return el._noopNodeId;
   const id = 'n' + (nodeIdCounter++);
-  el._aetherNodeId = id;
+  el._noopNodeId = id;
   if (typeof el.setAttribute === 'function') {
     el.setAttribute('data-noop-node', id);
   }
@@ -120,7 +120,7 @@ export function bindAttribute(
     if (ctx && signalRef) {
       ensureNodeId(el);
       ctx.bindings.push({
-        nodeId: el._aetherNodeId,
+        nodeId: el._noopNodeId,
         type: 'attribute',
         attributeName: attrName,
         signalRef,
@@ -158,7 +158,7 @@ export function bindStyle(
     if (ctx && signalRef) {
       ensureNodeId(el);
       ctx.bindings.push({
-        nodeId: el._aetherNodeId,
+        nodeId: el._noopNodeId,
         type: 'attribute',
         attributeName: 'style',
         signalRef,
@@ -372,6 +372,38 @@ export function __noopDisposeComponent(compId: string): void {
   }
 }
 
+// ── Conditional rendering helper ───────────────────────────
+
+export function bindCondition(
+  parent: Node,
+  test: () => boolean,
+  consequent: () => Node,
+  alternate: () => Node,
+): Node {
+  if (isSSR()) {
+    const node = test() ? consequent() : alternate();
+    parent.appendChild(node);
+    return node;
+  }
+  const anchor = document.createComment('cond');
+  parent.appendChild(anchor);
+  let currentChild: Node | null = null;
+  effect(() => {
+    const val = test();
+    if (currentChild && currentChild.parentNode) {
+      currentChild.parentNode.removeChild(currentChild);
+      if (currentChild.nodeType === 1) {
+        disposeNodeEffects(currentChild as Element);
+      }
+    }
+    currentChild = val ? consequent() : alternate();
+    if (currentChild) {
+      parent.insertBefore(currentChild, anchor);
+    }
+  });
+  return anchor;
+}
+
 // ── List rendering helper ──────────────────────────────────
 
 export function __noopEach<T>(
@@ -379,14 +411,14 @@ export function __noopEach<T>(
   render: (item: T, index: number) => Node,
 ): DocumentFragment {
   if (!Array.isArray(items)) {
-    aetherWarn('__noopEach called with non-array:', items, '— expected an array');
+    noopWarn('__noopEach called with non-array:', items, '— expected an array');
     return document.createDocumentFragment();
   }
   const frag = document.createDocumentFragment();
   for (let i = 0; i < items.length; i++) {
     const node = render(items[i], i);
     if (!(node instanceof Node)) {
-      aetherWarn('__noopEach: render function returned non-Node at index', i, node);
+      noopWarn('__noopEach: render function returned non-Node at index', i, node);
     }
     frag.appendChild(node);
   }
@@ -434,7 +466,7 @@ export function __noopReconcile<T>(
     if (!node) {
       node = render(item, i);
       if (node instanceof Element) {
-        node.setAttribute('data-aether-key', key);
+        node.setAttribute('data-noop-key', key);
       }
     }
     newKeyToNode.set(key, node);
@@ -478,8 +510,8 @@ export function createContext<T>(defaultValue: T): Context<T> {
     }
     // CSR: use a global stack
     const g = globalThis as any;
-    if (!g.__aetherContextStack) g.__aetherContextStack = new Map();
-    const stack = g.__aetherContextStack;
+    if (!g.__noopContextStack) g.__noopContextStack = new Map();
+    const stack = g.__noopContextStack;
     const prev = stack.get(_key) || [];
     stack.set(_key, [...prev, props.value]);
     try {
@@ -500,7 +532,7 @@ export function useContext<T>(context: Context<T>): T {
     return context._defaultValue;
   }
   const g = globalThis as any;
-  const stack = g.__aetherContextStack;
+  const stack = g.__noopContextStack;
   if (stack) {
     const values = stack.get(context._key);
     if (values && values.length > 0) return values[values.length - 1];

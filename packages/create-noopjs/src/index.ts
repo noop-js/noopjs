@@ -41,7 +41,7 @@ function copyTemplate(srcDir: string, destDir: string, vars: Record<string, stri
 export async function run(): Promise<void> {
   const projectDir = process.argv[2] || await ask('Where should we create your project?', '.');
   const template = process.argv[3] || await ask('Which template? (counter, blog, empty)', 'counter');
-  const name = process.argv[4] || projectDir === '.' ? 'my-aether-app' : projectDir;
+  const name = process.argv[4] || projectDir === '.' ? 'my-noop-app' : projectDir;
 
   const dest = resolve(process.cwd(), projectDir === '.' ? '.' : projectDir);
   const templateDir = resolve(templatesDir, template);

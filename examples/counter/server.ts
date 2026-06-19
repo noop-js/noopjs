@@ -59,7 +59,7 @@ async function start() {
   });
 
   server.listen(3000, () => {
-    console.log('Aether SSR dev server at http://localhost:3000');
+    console.log('NoopJS SSR dev server at http://localhost:3000');
   });
 }
 

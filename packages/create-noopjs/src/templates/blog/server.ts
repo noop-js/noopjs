@@ -40,7 +40,7 @@ async function start() {
     try {
       vite.middlewares.handle(req, res, async () => {
         const { render } = await vite.ssrLoadModule('/src/entry-server.ts');
-        const isNav = req.headers['x-aether-navigate'] === '1';
+        const isNav = req.headers['x-noop-navigate'] === '1';
 
         if (isNav) {
           const result = await render(routeName, params);

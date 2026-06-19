@@ -406,16 +406,16 @@ describe('dev warnings', () => {
   });
 
   it('__noopFreezeProps freezes props in dev mode', () => {
-    (globalThis as any).__AETHER_DEV = true;
+    (globalThis as any).__NOOP_DEV = true;
     const props = __noopFreezeProps({ name: 'test', value: 42 });
     expect(Object.isFrozen(props)).toBe(true);
-    delete (globalThis as any).__AETHER_DEV;
+    delete (globalThis as any).__NOOP_DEV;
   });
 
   it('__noopFreezeProps returns props unchanged in non-dev mode', () => {
-    (globalThis as any).__AETHER_DEV = false;
+    (globalThis as any).__NOOP_DEV = false;
     const props = __noopFreezeProps({ name: 'test' });
     expect(Object.isFrozen(props)).toBe(false);
-    delete (globalThis as any).__AETHER_DEV;
+    delete (globalThis as any).__NOOP_DEV;
   });
 });

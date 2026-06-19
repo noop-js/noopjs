@@ -228,7 +228,7 @@ function vlqEncode(values: number[]): string {
           map: compiled.map || null,
         };
       } catch (err: any) {
-        this.error(`[Aether] Failed to compile ${id}: ${err.message}`);
+        this.error(`[Noop] Failed to compile ${id}: ${err.message}`);
         return null;
       }
     },

@@ -8,7 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@aether/vite": "^0.0.1",
+    "@noopjs/vite": "^0.0.1",
     "vite": "^6.0.0"
   },
   "devDependencies": {

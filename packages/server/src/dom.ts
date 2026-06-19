@@ -1,6 +1,6 @@
 /**
  * Minimal server-side DOM shim for NoopJS SSR.
- * Implements just enough of the DOM API for compiled Aether components.
+ * Implements just enough of the DOM API for compiled NoopJS components.
  */
 
 export class ServerTextNode {
@@ -8,7 +8,7 @@ export class ServerTextNode {
   nodeName = '#text';
   _value: string;
   parentNode: ServerElement | null = null;
-  _aetherNodeId: string | null = null;
+  _noopNodeId: string | null = null;
 
   constructor(text: string) {
     this._value = text;
@@ -32,7 +32,7 @@ export class ServerComment {
   nodeName = '#comment';
   _value: string;
   parentNode: ServerElement | null = null;
-  _aetherNodeId: string | null = null;
+  _noopNodeId: string | null = null;
 
   constructor(text: string) {
     this._value = text;
@@ -49,7 +49,7 @@ export class ServerElement {
   attributes: Map<string, string> = new Map();
   children: any[] = [];
   parentNode: any = null;
-  _aetherNodeId: string | null = null;
+  _noopNodeId: string | null = null;
   _isFragment: boolean = false;
   className: string = '';
   innerHTML: string = '';

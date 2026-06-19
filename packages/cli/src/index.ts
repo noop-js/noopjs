@@ -184,7 +184,7 @@ async function runInit() {
   const pkgPath = path.resolve(root, 'package.json');
   if (!fs.existsSync(pkgPath)) {
     const pkg = {
-      name: 'my-aether-app',
+      name: 'my-noop-app',
       version: '0.1.0',
       type: 'module',
       scripts: {

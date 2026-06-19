@@ -31,6 +31,7 @@ interface NavigationResponse {
 let signalRegistry = new Map<string, ReturnType<typeof signal>>();
 let effectDisposers: (() => void)[] = [];
 let routerStarted = false;
+let navigationInProgress = false;
 
 // ── Prefetch Cache ──────────────────────────────────────────
 
@@ -89,7 +90,7 @@ export function init(): void {
     initFromState(state);
     startRouter();
   } catch (e) {
-    console.error('[Aether] Failed to parse state:', e);
+    console.error('[Noop] Failed to parse state:', e);
   }
 }
 
@@ -105,9 +106,9 @@ export function initFromState(state: SerializedState): void {
   // Restore context values
   if (state.contextValues) {
     const g = globalThis as any;
-    if (!g.__aetherContextStack) g.__aetherContextStack = new Map();
+    if (!g.__noopContextStack) g.__noopContextStack = new Map();
     for (const [key, value] of Object.entries(state.contextValues)) {
-      g.__aetherContextStack.set(key, [value]);
+      g.__noopContextStack.set(key, [value]);
     }
   }
 
@@ -121,7 +122,7 @@ export function initFromState(state: SerializedState): void {
 function attachBinding(binding: BindingDescriptor): void {
   const sig = signalRegistry.get(binding.signalRef);
   if (!sig) {
-    console.warn(`[Aether] Signal not found: ${binding.signalRef}`);
+    console.warn(`[Noop] Signal not found: ${binding.signalRef}`);
     return;
   }
 
@@ -137,7 +138,7 @@ function attachBinding(binding: BindingDescriptor): void {
   }
 
   if (!node) {
-    console.warn(`[Aether] Node not found: ${binding.nodeId}`);
+    console.warn(`[Noop] Node not found: ${binding.nodeId}`);
     return;
   }
 
@@ -196,7 +197,7 @@ async function handleSSRHandler(
   } catch {
     // Fallback: the handler may already be loaded in the runtime
     // registry (for client-rendered components).
-    console.warn(`[Aether] Handler not loaded: ${handlerId}`);
+    console.warn(`[Noop] Handler not loaded: ${handlerId}`);
   }
 }
 
@@ -209,6 +210,23 @@ function disposeAll(): void {
     dispose();
   }
   effectDisposers = [];
+}
+
+// ── Scroll restoration ────────────────────────────────────
+
+let scrollPositions = new Map<string, number>();
+
+function saveScrollPosition(): void {
+  scrollPositions.set(window.location.pathname, window.scrollY);
+}
+
+function restoreScrollPosition(path: string): void {
+  const y = scrollPositions.get(path);
+  if (y !== undefined) {
+    requestAnimationFrame(() => window.scrollTo(0, y));
+  } else {
+    window.scrollTo(0, 0);
+  }
 }
 
 // ── Router ─────────────────────────────────────────────────
@@ -228,6 +246,7 @@ function startRouter(): void {
     if (isModifier) return;
 
     event.preventDefault();
+    saveScrollPosition();
     navigate(href).catch(console.error);
   });
 
@@ -242,15 +261,17 @@ function findAnchor(el: HTMLElement | null): HTMLAnchorElement | null {
   return null;
 }
 
-export async function navigate(href: string): Promise<void> {
+export async function navigate(href: string, options?: { replace?: boolean }): Promise<void> {
+  if (navigationInProgress) return;
   const url = new URL(href, window.location.origin);
   if (url.origin !== window.location.origin) return;
 
+  navigationInProgress = true;
   try {
     const cached = prefetchCache.get(href);
     if (cached) {
       prefetchCache.delete(href);
-      await applyNavigation(cached, href);
+      await applyNavigation(cached, href, options);
       return;
     }
 
@@ -264,13 +285,15 @@ export async function navigate(href: string): Promise<void> {
     }
 
     const nav: NavigationResponse = await response.json();
-    await applyNavigation(nav, href);
+    await applyNavigation(nav, href, options);
   } catch {
     try { window.location.href = href; } catch {}
+  } finally {
+    navigationInProgress = false;
   }
 }
 
-async function applyNavigation(nav: NavigationResponse, href: string): Promise<void> {
+async function applyNavigation(nav: NavigationResponse, href: string, options?: { replace?: boolean }): Promise<void> {
   if (document.startViewTransition) {
     await document.startViewTransition(async () => {
       performDOMSwap(nav.html);
@@ -280,26 +303,60 @@ async function applyNavigation(nav: NavigationResponse, href: string): Promise<v
   }
 
   applyState(nav.state);
-  window.history.pushState({}, '', href);
+  // For browser back/forward (popstate), the browser already updated the URL.
+  // Only push a new history entry for programmatic (click) navigation.
+  if (!options?.replace) {
+    saveScrollPosition();
+    window.history.pushState({}, '', href);
+  }
+  restoreScrollPosition(href);
   observeLinks();
 }
 
+const SANITIZE_REMOVE_TAGS = new Set(['script', 'iframe', 'object', 'embed', 'applet']);
+
 function sanitizeNode(node: Node): void {
-  if (node.nodeType === 1) {
-    const el = node as Element;
-    const attrs = el.attributes;
-    for (let i = attrs.length - 1; i >= 0; i--) {
-      const name = attrs[i].name;
-      if (name.startsWith('on') || name === 'href' && attrs[i].value.startsWith('javascript:')) {
-        el.removeAttribute(name);
-      }
+  if (node.nodeType === 3) return;
+  if (node.nodeType !== 1) return;
+
+  const el = node as Element;
+  const tag = el.tagName.toLowerCase();
+
+  // Remove dangerous elements entirely
+  if (SANITIZE_REMOVE_TAGS.has(tag)) {
+    el.replaceWith(...Array.from(el.childNodes));
+    return;
+  }
+
+  // Strip dangerous attributes
+  const attrs = el.attributes;
+  for (let i = attrs.length - 1; i >= 0; i--) {
+    const name = attrs[i].name.toLowerCase();
+    const val = attrs[i].value.toLowerCase();
+    if (
+      name.startsWith('on') ||
+      name === 'href' && val.startsWith('javascript:') ||
+      name === 'action' && val.startsWith('javascript:') ||
+      name === 'formaction' ||
+      name === 'srcdoc' ||
+      name === 'xlink:href'
+    ) {
+      el.removeAttribute(name);
     }
-    let child = el.firstChild;
-    while (child) {
-      const next = child.nextSibling;
-      sanitizeNode(child);
-      child = next;
-    }
+  }
+
+  // Strip style attribute if it contains JS expressions
+  const styleAttr = el.getAttribute('style');
+  if (styleAttr && /expression\s*\(|javascript\s*:|@import\s/.test(styleAttr.toLowerCase())) {
+    el.removeAttribute('style');
+  }
+
+  // Recurse into children
+  let child = el.firstChild;
+  while (child) {
+    const next = child.nextSibling;
+    sanitizeNode(child);
+    child = next;
   }
 }
 
@@ -323,7 +380,7 @@ function performDOMSwap(html: string): void {
 }
 
 window.addEventListener('popstate', () => {
-  navigate(window.location.pathname + window.location.search);
+  navigate(window.location.pathname + window.location.search, { replace: true });
 });
 
 if (typeof document !== 'undefined') {

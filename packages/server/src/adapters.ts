@@ -1,13 +1,13 @@
 import { renderToString } from './render';
 import type { IncomingMessage, ServerResponse } from 'http';
 
-export interface AetherRequest {
+export interface NoopRequest {
   url?: string;
   method?: string;
   headers: Record<string, string | string[] | undefined>;
 }
 
-export interface AetherResponse {
+export interface NoopResponse {
   statusCode: number;
   headers: Record<string, string>;
   body: string;

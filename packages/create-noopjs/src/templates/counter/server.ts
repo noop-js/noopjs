@@ -49,7 +49,7 @@ async function start() {
   });
 
   server.listen(PORT, () => {
-    console.log(`Aether App at http://localhost:${PORT}`);
+    console.log(`NoopJS App at http://localhost:${PORT}`);
   });
 }
 

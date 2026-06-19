@@ -1,5 +1,5 @@
 /**
- * Generate a Custom Element wrapper for an Aether component.
+ * Generate a Custom Element wrapper for a NoopJS component.
  *
  * Input: compiled component code (returns a DOM Node).
  * Output: component code + custom element class + registration.

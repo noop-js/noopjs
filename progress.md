@@ -1,4 +1,4 @@
-# AetherJS Build Progress
+# NoopJS Build Progress
 
 > **Status Key:** `[ ]` — Pending &nbsp; `[~]` — In Progress &nbsp; `[X]` — Complete
 
@@ -20,10 +20,10 @@
 
 ### Compiler: Array/List Expressions in JSX
 - [X] Recognize `{items.map(item => <li>{item}</li>)}` in JSX expression containers
-- [X] Generate iteration code via `__aetherEach(items, fn)` runtime helper
+- [X] Generate iteration code via `__noopEach(items, fn)` runtime helper
 - [X] Support literal array expressions `{[<A/>, <B/>]}`
-- [X] Support `key` prop on list children for identity tracking via `__aetherReconcile`
-- [X] Add `__aetherReconcile(items, render, keyFn, listId)` helper to runtime for list diffing
+- [X] Support `key` prop on list children for identity tracking via `__noopReconcile`
+- [X] Add `__noopReconcile(items, render, keyFn, listId)` helper to runtime for list diffing
 - [X] **Test:** array `.map()` renders correct number of elements
 - [X] **Test:** keyed reconciliation preserves DOM nodes across updates
 - [X] **Test:** empty array renders no children
@@ -64,13 +64,13 @@
 - [X] **Test:** static style object produces inline CSS string
 - [X] **Test:** signal-driven style updates
 
-### AetherCSS: Atomic CSS Engine
+### NoopCSS: Atomic CSS Engine
 - [X] Static inline `style` objects extracted to hashed class names at compile time
 - [X] `CompileResult.css` returns aggregated CSS string
 - [X] Dynamic style objects (variable refs) preserved as `setAttribute('style', ...)`
 - [X] Coexistence: `class="base" style={{ color: 'red' }}` → `className = "base _ahash"`
 - [X] Deduplication: identical style objects across elements produce one CSS rule
-- [X] `extractStyles` in `@aether/css` handles `export const styles = { ... }` pattern
+- [X] `extractStyles` in `@noopjs/css` handles `export const styles = { ... }` pattern
 - [X] Vite plugin merges CSS from both `extractStyles` and compiler
 - [X] Virtual CSS module loading via Vite's CSS pipeline
 - [X] **Test:** static inline styles → hashed classes (no `setAttribute`)
@@ -145,7 +145,7 @@
 
 ### Portal / Teleport
 - [X] `createPortal(children, target)` — renders DOM node outside parent tree
-- [X] SSR: portal renders inline with `data-aether-portal` attribute, client moves it
+- [X] SSR: portal renders inline with `data-noop-portal` attribute, client moves it
 - [X] **Test:** portal renders to correct target
 - [X] **Test:** portal content is interactive
 
@@ -207,7 +207,7 @@
 
 ### Lazy Handler Code Splitting
 - [X] Vite plugin collects handler metadata during build (`extractHandlers`)
-- [X] Vite plugin emits handler chunks as separate virtual modules (`\0aether-handler:`)
+- [X] Vite plugin emits handler chunks as separate virtual modules (`\0noop-handler:`)
 - [X] Runtime `import()` resolves to real chunk URLs (derived from component ID)
 - [X] Build-time `handlerCodeMap` maps handler IDs to extracted code
 - [X] **Test:** handler code maps are registered for extracted handlers
@@ -228,7 +228,7 @@
 ### Two Parallel Signal Trees (Fix)
 - [X] Client resumer restores signal values from SSR serialized state
 - [X] Signal instances created per-path from serialized values
-- [X] Context values restored to `__aetherContextStack` on client
+- [X] Context values restored to `__noopContextStack` on client
 - [X] **Test:** previous effects disposed on re-init (no duplicate signal trees)
 - [X] **Test:** context values restored from state
 
@@ -247,17 +247,17 @@
 - [X] **Test:** source map contains valid mappings
 
 ### Meaningful Error Messages
-- [X] Add `aetherError(msg, hint)` — creates Error with `💡 hint` suffix
-- [X] Add `aetherWarn(msg, ...args)` — console.warn prefix in dev mode
+- [X] Add `noopError(msg, hint)` — creates Error with `💡 hint` suffix
+- [X] Add `noopWarn(msg, ...args)` — console.warn prefix in dev mode
 - [X] Add suggestions for common issues (array warnings, binding failures)
 - [X] **Test:** error messages include actionable guidance
 
 ### Dev Warnings
-- [X] Warn on missing `key` in list iterations (via __aetherEach validator)
+- [X] Warn on missing `key` in list iterations (via __noopEach validator)
 - [X] Warn on non-serializable signal values during SSR
 - [X] Warn on stale closures in event handlers
 - [X] Warn on orphaned effects (component unmounted but effect still running)
-- [X] Warn on direct mutation of props (`__aetherFreezeProps` in dev mode)
+- [X] Warn on direct mutation of props (`__noopFreezeProps` in dev mode)
 - [X] **Test:** warnings fire in dev mode, silent in prod
 
 ### HMR State Preservation
@@ -267,11 +267,11 @@
 - [ ] **Test:** counter retains state after file edit
 
 ### CLI Expansion
-- [X] `aether generate component <name>` — scaffold component
-- [X] `aether generate page <name>` — scaffold page
-- [X] `aether analyze` — bundle size report
-- [X] `aether check` — type-check all .aether files
-- [X] `aether init` — initialize a new project
+- [X] `noopjs generate component <name>` — scaffold component
+- [X] `noopjs generate page <name>` — scaffold page
+- [X] `noopjs analyze` — bundle size report
+- [X] `noopjs check` — type-check all .noop files
+- [X] `noopjs init` — initialize a new project
 - [X] **Test:** CLI commands run without error
 
 ### Comprehensive Test Suite
@@ -281,7 +281,7 @@
 - [X] **CSS:** export const styles extraction, media queries, pseudo-classes, animations, variables (7 tests)
 - [X] **Server:** streaming SSR, caching (TTL, invalidate), ETag, adapters, Suspense async (10 tests)
 - [X] **Client:** corrupted state, missing nodes, multiple bindings, event delegation, handler test, navigation edges (caching, view transitions, error handling) (27 tests)
-- [X] **Integration:** full pipeline compile→SSR→resume + AetherCSS end-to-end (10 tests)
+- [X] **Integration:** full pipeline compile→SSR→resume + NoopCSS end-to-end (10 tests)
 - [X] **Vite plugin:** HMR accept block, handler code maps, source maps (10 tests)
 - [X] **CLI:** commands, help output (6 tests)
 - [X] **E2E:** blog navigation, counter SSR+resumption (9 tests)
@@ -310,15 +310,15 @@
 
 ### Release Pipeline
 - [X] Changesets installed and configured (`@changesets/cli`, `@changesets/changelog-github`)
-- [X] `.changeset/config.json` — public access, fixed versioning for `@aether/* + create-aether`
+- [X] `.changeset/config.json` — public access, fixed versioning for `@noopjs/* + create-noopjs`
 - [X] GitHub Actions: `release.yml` (tag-triggered publish) + `ci.yml` (PR CI)
 - [X] `publishConfig.access: "public"` in all 8 packages
 - [ ] First changeset to set initial versions
 - [ ] NPM_TOKEN secret in GitHub repo settings
-- [ ] Verify `npm create aether` scaffold
+- [ ] Verify `npm create noopjs` scaffold
 
 ### Scaffolding
-- [X] `@aether/create-aether` — `npm create aether@latest`
+- [X] `@noopjs/create-noopjs` — `npm create noopjs@latest`
 - [X] Templates: `counter`, `blog`, `empty`
 - [ ] **Test:** scaffold produces working project (requires npm link)
 
@@ -329,8 +329,8 @@
 - [ ] Example gallery on documentation site
 
 ### Ecosystem Plugins
-- [ ] `eslint-plugin-aether` — lint rules for .aether files
-- [ ] Aether DevTools — browser extension for inspecting signals, bindings, state
+- [ ] `eslint-plugin-noopjs` — lint rules for .noop files
+- [ ] NoopJS DevTools — browser extension for inspecting signals, bindings, state
 - [ ] Tailwind CSS integration guide
 - [ ] Authentication pattern (session, cookies, JWT)
 
@@ -345,7 +345,7 @@
 | **0–6** Core Architecture | 100% | ✅ |
 | **7–13** MVP | 100% | ✅ |
 | **B** Production Compiler & Reactivity | 100% | ✅ |
-| **AetherCSS** Atomic CSS Engine | 100% | ✅ |
+| **NoopCSS** Atomic CSS Engine | 100% | ✅ |
 | **C** Composition & Data Flow | 100% | ✅ |
 | **D** Performance & Production SSR | 90% | ✅ |
 | **E** Developer Experience & Testing | 90% | ✅ |
@@ -373,11 +373,11 @@
 ## Key Deliverables Complete
 
 ### Compiler (Phase B)
-- Array/list expressions (`.map()` + `__aetherEach`)
+- Array/list expressions (`.map()` + `__noopEach`)
 - Ternary/conditional JSX (`&&`, `||`, `? :`)
 - Spread attributes (DOM + components)
 - Boolean attributes (property assignment)
-- Static style → atomic CSS extraction (AetherCSS)
+- Static style → atomic CSS extraction (NoopCSS)
 - Dynamic `style` prop (inline setAttribute and signal-driven via bindStyle)
 - `dangerouslySetInnerHTML`
 - Complex children composition
@@ -386,9 +386,9 @@
 - Source map generation (`source-map-js`, VLQ remapping)
 - Param destructuring preservation
 - JSX expression fix (`className`, fragments)
-- `@aether/runtime` import preservation
+- `@noopjs/runtime` import preservation
 - if/else control flow in component body
-- Keyed list reconciliation (`__aetherReconcile`)
+- Keyed list reconciliation (`__noopReconcile`)
 - CSS import line offset handling (`prependImport`)
 
 ### Signals (Phase B)
@@ -399,21 +399,21 @@
 
 ### Runtime (Phase B/C/D)
 - `onMount` / `onUnmount` / `onUpdate` lifecycle hooks
-- `__aetherEach` + `__aetherReconcile` list helpers
+- `__noopEach` + `__noopReconcile` list helpers
 - `createContext` / `useContext` with Provider
 - `ErrorBoundary` with lazy children + DOM/function fallback
 - `Suspense` with sync/async paths
 - `createPortal` with SSR support
 - Transition hooks (`onBeforeEnter`, `onEnter`, `onAfterEnter`, `onBeforeLeave`, `onLeave`, `onAfterLeave`)
 - SSR context serialization + resume
-- Dev warnings (`aetherWarn`, `aetherError`, `__aetherFreezeProps`)
+- Dev warnings (`noopWarn`, `noopError`, `__noopFreezeProps`)
 - Effect cleanup via MutationObserver (`startEffectCleanup`, `stopEffectCleanup`)
 
 ### Vite Plugin (Phase D/E)
 - Source map wire-up (compiled.map instead of null)
 - CSS import line offset handling (VLQ remapping)
 - Handler metadata extraction for code splitting
-- Virtual handler modules (`\0aether-handler:`)
+- Virtual handler modules (`\0noop-handler:`)
 - HMR accept boundary appended in dev mode
 - Asset preload headers via renderChunk hook
 

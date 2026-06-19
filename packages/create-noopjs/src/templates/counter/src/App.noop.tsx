@@ -5,7 +5,7 @@ export default function App() {
 
   return (
     <div style={{ padding: '32px', fontFamily: 'sans-serif', maxWidth: '400px', margin: '0 auto' }}>
-      <h1>Aether App</h1>
+      <h1>NoopJS App</h1>
       <p style={{ fontSize: '24px', fontWeight: 'bold' }}>Count: {count}</p>
       <button
         style={{ padding: '8px 16px', fontSize: '18px', cursor: 'pointer' }}

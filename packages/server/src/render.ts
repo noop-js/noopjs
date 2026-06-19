@@ -8,7 +8,7 @@ export interface RenderResult {
 }
 
 /**
- * Render an Aether component to HTML with serialized state.
+ * Render a NoopJS component to HTML with serialized state.
  * Wrapped in error boundary — if the component throws, returns fallback HTML.
  * Supports async components (Suspense with async children).
  * Records performance marks when globalThis.performance is available.
@@ -18,7 +18,7 @@ export async function renderToString(
   props: Record<string, any> = {},
 ): Promise<RenderResult> {
   const perf = typeof performance !== 'undefined' ? performance : null;
-  perf?.mark('aether:ssr:start');
+  perf?.mark('noop:ssr:start');
 
   const componentId = 'c0';
   const ctx = createSSRContext(componentId);
@@ -32,7 +32,7 @@ export async function renderToString(
       try {
         rootNode = await rootNode;
       } catch {
-        perf?.mark('aether:ssr:end');
+        perf?.mark('noop:ssr:end');
         return {
           html: '',
           state: { signals: {}, bindings: [], handlers: {}, rootId: componentId },
@@ -56,7 +56,7 @@ export async function renderToString(
       }
     }
 
-    perf?.mark('aether:ssr:render');
+    perf?.mark('noop:ssr:render');
 
     if (rootNode != null) {
       const container = ctx.document.createElement('div');
@@ -64,17 +64,17 @@ export async function renderToString(
       const html = container.toHTML();
       const state = getSerializedState();
 
-      perf?.mark('aether:ssr:serialize');
-      perf?.measure('aether:ssr:total', 'aether:ssr:start', 'aether:ssr:serialize');
-      perf?.measure('aether:ssr:render-duration', 'aether:ssr:render', 'aether:ssr:serialize');
+      perf?.mark('noop:ssr:serialize');
+      perf?.measure('noop:ssr:total', 'noop:ssr:start', 'noop:ssr:serialize');
+      perf?.measure('noop:ssr:render-duration', 'noop:ssr:render', 'noop:ssr:serialize');
 
       return { html, state, componentId };
     }
 
-    perf?.mark('aether:ssr:end');
+    perf?.mark('noop:ssr:end');
     return { html: '', state: getSerializedState(), componentId };
   } catch (err) {
-    perf?.mark('aether:ssr:end');
+    perf?.mark('noop:ssr:end');
     return {
       html: errorFallbackHtml(err),
       state: { signals: {}, bindings: [], handlers: {}, rootId: componentId },
@@ -86,11 +86,11 @@ export async function renderToString(
 }
 
 /**
- * Render an Aether component to a ReadableStream.
+ * Render a NoopJS component to a ReadableStream.
  * Streams HTML in chunks for progressive loading.
  */
 /**
- * Render an Aether component to a ReadableStream with progressive shell-first output.
+ * Render a NoopJS component to a ReadableStream with progressive shell-first output.
  * Streams the HTML shell immediately, renders the component, then streams content + state.
  */
 export function renderToStream(

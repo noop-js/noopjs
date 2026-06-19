@@ -20,7 +20,7 @@ With server-side rendering, NoopJS generates HTML on the server, serializes the 
   },
   {
     slug: 'signals-explained',
-    title: 'Aether Signals Explained',
+    title: 'NoopJS Signals Explained',
     date: '2026-02-01',
     excerpt: 'Understanding signals, computed values, and effects — the core primitives of NoopJS reactivity.',
     content: `Signals are the fundamental building block of reactivity in NoopJS.

@@ -12,7 +12,7 @@ export default function About() {
         <a href="/about" style={s.link}>About</a>
       </nav>
       <h1>About This Blog</h1>
-      <p>This blog is built with Aether, a zero-runtime framework for reactive web applications.</p>
+      <p>This blog is built with NoopJS, a zero-runtime framework for reactive web applications.</p>
       <p>Every page is server-side rendered, then resumed on the client with fine-grained signal bindings.</p>
     </div>
   );

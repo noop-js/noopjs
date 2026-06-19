@@ -21,7 +21,7 @@ export default function Home() {
         <a href="/about" style={s.link}>About</a>
       </nav>
       <h1 style={s.title}>Noop Blog</h1>
-      <p style={s.subtitle}>A minimal blog built with Aether — zero-runtime SSR and signals.</p>
+      <p style={s.subtitle}>A minimal blog built with NoopJS — zero-runtime SSR and signals.</p>
       {posts.map(post => (
         <div style={s.card}>
           <a href={`/blog/${post.slug}`} style={s.cardTitle}>{post.title}</a>
@@ -29,7 +29,7 @@ export default function Home() {
           <p style={s.cardExcerpt}>{post.excerpt}</p>
         </div>
       ))}
-      <footer style={s.footer}>Powered by Aether</footer>
+      <footer style={s.footer}>Powered by NoopJS</footer>
     </div>
   );
 }

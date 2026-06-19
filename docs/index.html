@@ -231,7 +231,7 @@
         <div class="nav-section-title">Core Concepts</div>
         <a href="#signals" class="nav-item">Signals</a>
         <a href="#components" class="nav-item">Components</a>
-        <a href="#aethercss" class="nav-item">NoopCSS</a>
+        <a href="#noopcss" class="nav-item">NoopCSS</a>
         <a href="#event-handlers" class="nav-item">Event Handlers</a>
         <a href="#lists" class="nav-item">Lists &amp; Conditionals</a>
         <a href="#context" class="nav-item">Context &amp; Portals</a>
@@ -284,14 +284,14 @@
       </ul>
 
       <div class="callout">
-        Aether is currently in early development. The APIs are stable but expect iteration as we approach 1.0.
+        NoopJS is currently in early development. The APIs are stable but expect iteration as we approach 1.0.
       </div>
     </section>
 
     <!-- ──────────────────── INSTALLATION ──────────────────── -->
     <section id="installation">
       <h2>Installation</h2>
-      <p>Aether is a monorepo published as several packages on npm:</p>
+      <p>NoopJS is a monorepo published as several packages on npm:</p>
       <pre><code># Core packages
 npm install @noopjs/compiler @noopjs/signals @noopjs/runtime @noopjs/client
 
@@ -309,7 +309,7 @@ npm install @noopjs/cli</code></pre>
 # or
 npm create @noopjs</code></pre>
 
-      <p>Or add Aether to an existing Vite project:</p>
+      <p>Or add NoopJS to an existing Vite project:</p>
       <pre><code>npm install @noopjs/vite @noopjs/compiler @noopjs/signals @noopjs/runtime @noopjs/css
 # vite.config.ts
 import { defineConfig } from 'vite';
@@ -345,7 +345,7 @@ export default function Counter() {
 }</code></pre>
 
       <p>Mount it (<code>src/main.ts</code>):</p>
-      <pre><code>import Counter from './counter.aether';
+      <pre><code>import Counter from './counter.noop';
 
 const root = document.getElementById('root');
 root!.appendChild(Counter());</code></pre>
@@ -371,7 +371,7 @@ export default defineConfig({
     <section id="signals">
       <h2>Signals</h2>
       <p>
-        Aether uses <strong>signals</strong> as its sole reactivity primitive, following the
+        NoopJS uses <strong>signals</strong> as its sole reactivity primitive, following the
         <a href="https://github.com/tc39/proposal-signals">TC39 Signals proposal</a>.
         Signals are values that can be read, written, and observed for changes.
       </p>
@@ -444,7 +444,7 @@ readOnly.set();      // throws</code></pre>
     <section id="components">
       <h2>Components</h2>
       <p>
-        Aether components are <strong>plain functions</strong> that return DOM nodes.
+        NoopJS components are <strong>plain functions</strong> that return DOM nodes.
         They are compiled at build time — the source you write is never shipped as-is to the browser.
       </p>
 
@@ -457,7 +457,7 @@ export default function Greeting(props: { name: string }) {
       <h3>Composing Components</h3>
       <p>Components render other components by calling them directly:</p>
       <pre><code>import { signal } from '@noopjs/signals';
-import Greeting from './greeting.aether';
+import Greeting from './greeting.noop';
 
 export default function App() {
   const name = signal('World');
@@ -470,7 +470,7 @@ export default function App() {
 }</code></pre>
 
       <h3>Async Components</h3>
-      <p>Components can be <code>async</code>. Aether handles this during SSR and client rendering:</p>
+      <p>Components can be <code>async</code>. NoopJS handles this during SSR and client rendering:</p>
       <pre><code>export default async function AsyncPage(props: { slug: string }) {
   const data = await fetchData(props.slug);
   return &lt;div&gt;{data.title}&lt;/div&gt;;
@@ -492,7 +492,7 @@ return &lt;p&gt;Count: {count}&lt;/p&gt;;
     </section>
 
     <!-- ──────────────────── AETHERCSS ──────────────────── -->
-    <section id="aethercss">
+    <section id="noopcss">
       <h2>NoopCSS — Atomic CSS System</h2>
       <p>
         NoopCSS extracts static style objects into atomic CSS classes at build time.
@@ -562,7 +562,7 @@ return &lt;p&gt;Count: {count}&lt;/p&gt;;
     <section id="event-handlers">
       <h2>Event Handlers</h2>
       <p>
-        Event handlers in Aether use <strong>event delegation</strong>.
+        Event handlers in NoopJS use <strong>event delegation</strong>.
         The <code>onClick</code>/<code>onInput</code>/etc. props register handlers via <code>bindEvent</code>,
         which sets a <code>data-noop-ev</code> attribute and delegates through a global listener.
       </p>
@@ -726,7 +726,7 @@ export default function Animated() {
     <section id="tailwind">
       <h2>Tailwind CSS Integration</h2>
       <p>
-        Aether provides a first-class integration with <strong>Tailwind CSS v4</strong>.
+        NoopJS provides a first-class integration with <strong>Tailwind CSS v4</strong>.
         The <code>createTailwindResolver</code> function converts spacing-scale token values
         (like <code>token.spacing.6</code>) to their Tailwind utility equivalents (like <code>p-6</code>).
       </p>
@@ -785,7 +785,7 @@ const styles = {
 
       <div class="callout callout-warn">
         The safelist is needed because Tailwind v4 scans source files for class name strings.
-        Since token resolution happens during Aether's compilation step (not in Tailwind's scan),
+        Since token resolution happens during NoopJS.compilation step (not in Tailwind's scan),
         the generated class names must exist in files Tailwind can see.
       </div>
 
@@ -821,13 +821,13 @@ const myResolver: TokenResolver = {
     <section id="custom-elements">
       <h2>Custom Elements (Web Components)</h2>
       <p>
-        Aether components can be exported as <strong>native Custom Elements</strong>,
-        usable in any HTML page without Aether.
+        NoopJS components can be exported as <strong>native Custom Elements</strong>,
+        usable in any HTML page without NoopJS.
       </p>
 
       <h3>Creating a Custom Element</h3>
-      <p>Add the <code>@aether customElement</code> directive at the top of your component file:</p>
-      <pre><code>// @aether customElement 'my-counter'
+      <p>Add the <code>@noopjs customElement</code> directive at the top of your component file:</p>
+      <pre><code>// @noopjs customElement 'my-counter'
 import { signal } from '@noopjs/signals';
 
 export default function MyCounter() {
@@ -855,7 +855,7 @@ el.innerHTML; // Contains the component's DOM
     <section id="ssr-overview">
       <h2>SSR — Server-Side Rendering</h2>
       <p>
-        Aether's SSR renders components to HTML on the server, serializes the reactive graph,
+        NoopJS.s SSR renders components to HTML on the server, serializes the reactive graph,
         and sends it to the client. The client <strong>resumes</strong> the signal graph without
         re-running component code — true resumability, not hydration.
       </p>
@@ -875,7 +875,7 @@ el.innerHTML; // Contains the component's DOM
       <h3>Server Entry</h3>
       <pre><code>// src/entry-server.ts
 import { renderToString } from '@noopjs/server';
-import Counter from './counter.aether';
+import Counter from './counter.noop';
 
 export async function render() {
   const { html, state } = await renderToString(Counter);
@@ -888,7 +888,7 @@ import express from 'express';
 import { createExpressMiddleware } from '@noopjs/server';
 import { noopVite } from '@noopjs/vite';
 import { createServer } from 'vite';
-import Counter from './src/counter.aether';
+import Counter from './src/counter.noop';
 
 const app = express();
 
@@ -905,7 +905,7 @@ app.get('/', async (req, res) => {
   res.send(`
     &lt;!DOCTYPE html&gt;
     &lt;html&gt;
-    &lt;head&gt;&lt;title&gt;Aether SSR&lt;/title&gt;&lt;/head&gt;
+    &lt;head&gt;&lt;title&gt;NoopJS SSR&lt;/title&gt;&lt;/head&gt;
     &lt;body&gt;
       &lt;div id="root"&gt;${html}&lt;/div&gt;
       &lt;script id="__NOOP_STATE__" type="application/json"&gt;
@@ -932,7 +932,7 @@ import '@noopjs/client';   // auto-invokes init() on DOMContentLoaded</code></pr
     <section id="ssr-routing">
       <h2>SSR — Routing</h2>
       <p>
-        Aether supports <strong>file-based routing</strong> via <code>@noopjs/server</code>'s <code>buildRoutes</code> utility,
+        NoopJS supports <strong>file-based routing</strong> via <code>@noopjs/server</code>'s <code>buildRoutes</code> utility,
         plus client-side SPA navigation via <code>@noopjs/client</code>'s <code>navigate</code>.
       </p>
 
@@ -984,7 +984,7 @@ prefetchUrl('/blog/hello-noop');</code></pre>
     <section id="ssr-streaming">
       <h2>SSR — Streaming</h2>
       <p>
-        For larger pages, Aether supports <strong>streaming SSR</strong> with Suspense boundaries.
+        For larger pages, NoopJS supports <strong>streaming SSR</strong> with Suspense boundaries.
         The HTML shell is sent immediately, and content is streamed as it resolves.
       </p>
       <pre><code>import { renderToStream } from '@noopjs/server';
@@ -1059,7 +1059,7 @@ export default defineConfig({
     <section id="cli">
       <h2>CLI ( <code>@noopjs/cli</code> )</h2>
       <p>
-        The Aether CLI wraps Vite and provides project management commands.
+        The NoopJS CLI wraps Vite and provides project management commands.
       </p>
 
       <pre><code>npx @noopjs/cli [command]</code></pre>
@@ -1079,26 +1079,26 @@ export default defineConfig({
 
       <h3>Examples</h3>
       <pre><code># Start development
-npx aether dev
+npx noopjs dev
 
 # Build for production
-npx aether build
+npx noopjs build
 
 # Check all .noop.tsx files for errors
-npx aether check
+npx noopjs check
 
 # Generate a new component
-npx aether generate component MyButton
+npx noopjs generate component MyButton
 
 # Analyze bundle sizes
-npx aether analyze</code></pre>
+npx noopjs analyze</code></pre>
     </section>
 
     <!-- ──────────────────── CREATE AETHER ──────────────────── -->
     <section id="create-noopjs">
       <h2>create-noopjs</h2>
       <p>
-        Scaffold a new Aether project:
+        Scaffold a new NoopJS project:
       </p>
       <pre><code>npm create @noopjs
 # or
@@ -1177,7 +1177,7 @@ npx @noopjs/create-noopjs</code></pre>
       <h3><code>@noopjs/vite</code></h3>
       <table>
         <tr><th>Export</th><th>Description</th></tr>
-        <tr><td><code>noopVite(options?)</code></td><td>Vite plugin for Aether compilation</td></tr>
+        <tr><td><code>noopVite(options?)</code></td><td>Vite plugin for NoopJS compilation</td></tr>
       </table>
     </section>
 
@@ -1229,7 +1229,7 @@ console.log(result.handlers); // extracted handler descriptors</code></pre>
         <dt>handlers?: HandlerDescriptor[]</dt>
         <dd>Extracted event handler metadata</dd>
         <dt>customElementTag?: string</dt>
-        <dd>Custom element tag name (if @aether customElement directive is present)</dd>
+        <dd>Custom element tag name (if @noopjs customElement directive is present)</dd>
       </dl>
 
       <h3>TokenResolver Interface</h3>

@@ -29,7 +29,7 @@ describe('@noopjs/vite plugin', () => {
     expect(result.code).toContain("'div'");
   });
 
-  it('passes through non-aether files unchanged', async () => {
+  it('passes through non-noop files unchanged', async () => {
     const plugin = noopVite();
     const source = 'const x = 1;';
 

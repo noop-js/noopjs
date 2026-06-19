@@ -4,7 +4,7 @@ test.describe('Noop Counter SSR → Client Resumption', () => {
   test('serves SSR-rendered HTML with correct structure', async ({ page }) => {
     await page.goto('/');
 
-    // The page should have the Aether state script
+    // The page should have the NoopJS state script
     const stateEl = page.locator('#__NOOP_STATE__');
     await expect(stateEl).toBeAttached();
 

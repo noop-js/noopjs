@@ -32,12 +32,12 @@ export default function Home() {
       <nav style={{ display: 'flex', gap: 'token.spacing.6', paddingTop: 'token.spacing.4', paddingBottom: 'token.spacing.4', borderBottom: '2px solid #e2e8f0', marginBottom: 'token.spacing.8' }}>
         <a href="/" className={styles.link}>Home</a>
         <a href="/about" className={styles.link}>About</a>
-        <a href="/blog/hello-noop" className={styles.link}>Hello Aether</a>
+        <a href="/blog/hello-noop" className={styles.link}>Hello NoopJS</a>
         <a href="/blog/signals-explained" className={styles.link}>Signals</a>
       </nav>
 
       <h1 style={{ fontSize: '36px', fontWeight: '800', marginBottom: 'token.spacing.2' }}>Noop Blog</h1>
-      <p className={styles.subtitle} style={{ marginBottom: 'token.spacing.10' }}>A minimal blog built with Aether — zero-runtime SSR and signals.</p>
+      <p className={styles.subtitle} style={{ marginBottom: 'token.spacing.10' }}>A minimal blog built with NoopJS — zero-runtime SSR and signals.</p>
 
       <div style={{ padding: 'token.spacing.6', borderRadius: '12px', backgroundColor: '#f8fafc', marginBottom: 'token.spacing.4', border: '1px solid #e2e8f0' }}>
         <a href={`/blog/${posts[0].slug}`} style={{ fontSize: '22px', fontWeight: '700', color: '#1a1a2e', marginBottom: 'token.spacing.2', textDecoration: 'none', display: 'block' }}>{posts[0].title}</a>
@@ -51,7 +51,7 @@ export default function Home() {
         <p className={styles.cardExcerpt}>{posts[1].excerpt}</p>
       </div>
 
-      <footer className={styles.footer} style={{ marginTop: '48px', paddingTop: 'token.spacing.6', paddingBottom: 'token.spacing.6', borderTop: '2px solid #e2e8f0' }}>Powered by Aether</footer>
+      <footer className={styles.footer} style={{ marginTop: '48px', paddingTop: 'token.spacing.6', paddingBottom: 'token.spacing.6', borderTop: '2px solid #e2e8f0' }}>Powered by NoopJS</footer>
     </div>
   );
 }

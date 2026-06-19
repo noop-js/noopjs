@@ -164,7 +164,7 @@ describe('renderToString', () => {
     const perf = typeof performance !== 'undefined' ? performance : null;
     if (perf) {
       const measures = perf.getEntriesByType('measure');
-      const ssrMeasures = measures.filter(m => m.name.startsWith('aether:ssr:'));
+      const ssrMeasures = measures.filter(m => m.name.startsWith('noop:ssr:'));
       expect(ssrMeasures.length).toBeGreaterThan(0);
     }
   });

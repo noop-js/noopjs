@@ -1,4 +1,4 @@
-# AetherJS 1.0 — Full AI-Agent Implementable Specification
+# NoopJS 1.0 — Full AI-Agent Implementable Specification
 
 **Version:** 2.0.0 (supersedes draft)
 **Target Agent:** Autonomous Coding Agent
@@ -7,7 +7,7 @@
 
 ## Directive to Agent
 
-You are an expert systems programmer and compiler engineer. Your mission is to build AetherJS, a zero-runtime, resumable, signal-based web framework. You must follow this specification **exactly**. Do not invent features, abstractions, or optimizations beyond what is specified. Write code in TypeScript for runtime packages; use Rust (with `swc` or `oxc` for parsing) for the compiler if performance is needed, otherwise TypeScript with `@babel/core`. Write tests for every phase before implementing. Never proceed to the next phase until the current phase's test suite passes. If you encounter ambiguity, halt and ask for clarification.
+You are an expert systems programmer and compiler engineer. Your mission is to build NoopJS, a zero-runtime, resumable, signal-based web framework (NoopJS). You must follow this specification **exactly**. Do not invent features, abstractions, or optimizations beyond what is specified. Write code in TypeScript for runtime packages; use Rust (with `swc` or `oxc` for parsing) for the compiler if performance is needed, otherwise TypeScript with `@babel/core`. Write tests for every phase before implementing. Never proceed to the next phase until the current phase's test suite passes. If you encounter ambiguity, halt and ask for clarification.
 
 ---
 
@@ -24,7 +24,7 @@ You are an expert systems programmer and compiler engineer. Your mission is to b
 
 ## Core Primitives & APIs (Exact Contract)
 
-### 2.1 `@aether/signals` – TC39 Signals Polyfill
+### 2.1 `@noopjs/signals` – TC39 Signals Polyfill
 
 ```typescript
 // Exact interface
@@ -43,7 +43,7 @@ export function effect(fn: () => void): () => void; // returns disposer
 - The runtime must batch updates: within a single microtask (or synchronous if possible), multiple signal sets trigger effect re-runs only once.
 - No `peek()`, `untracked()`, or other extensions. The spec is minimal.
 
-### 2.2 `@aether/runtime` – Framework Hooks (to be compiled away)
+### 2.2 `@noopjs/runtime` – Framework Hooks (to be compiled away)
 
 These functions are only used during SSR and compiler transformations; they never ship to the client in final bundles.
 
@@ -64,14 +64,14 @@ export function createSuspenseBoundary(
 ): { html: string; suspenseId: string };
 ```
 
-These are placeholders for the compiler to recognize. Actual implementation lives in `@aether/compiler` and `@aether/server`.
+These are placeholders for the compiler to recognize. Actual implementation lives in `@noopjs/compiler` and `@noopjs/server`.
 
-### 2.3 Component Syntax (`.aether.tsx`)
+### 2.3 Component Syntax (`.noop.tsx`)
 
 Developers write JSX with a single pattern:
 
 ```tsx
-import { signal } from '@aether/signals';
+import { signal } from '@noopjs/signals';
 
 export default function MyComponent(props: { ... }) {
   const state = signal(initial);
@@ -90,7 +90,7 @@ export default function MyComponent(props: { ... }) {
 ## Repository Structure (Monorepo)
 
 ```text
-aetherjs/
+noopjs/
 ├── packages/
 │   ├── compiler/          # Rust/TS AST transformer
 │   ├── signals/           # Lightweight signals runtime
@@ -133,17 +133,17 @@ Use `pnpm workspaces`; compiler can be a separate Rust crate with a Node binding
 
 ### Phase 1: The Compiler – Core JSX Transform
 
-**Goal:** Convert `.aether.tsx` files into raw JavaScript that creates DOM nodes, wires signals, and registers lazy event handlers. The output must not import any runtime except `@aether/signals`.
+**Goal:** Convert `.noop.tsx` files into raw JavaScript that creates DOM nodes, wires signals, and registers lazy event handlers. The output must not import any runtime except `@noopjs/signals`.
 
 **Compiler Architecture:**
-- Input: TypeScript + JSX (extension `.aether.tsx` or `.tsx` with special pragma).
+- Input: TypeScript + JSX (extension `.noop.tsx` or `.tsx` with special pragma).
 - Use `swc` (Rust) or `@babel/core` + `@babel/parser` + `@babel/traverse` for AST manipulation.
 - Output: plain `.js` with no JSX, no runtime imports.
 
 **Detailed Transformation Rules:**
 
 1. **Imports:**
-   - Remove all framework-specific imports (`@aether/signals` except for signals that are used — keep the import for those symbols).
+   - Remove all framework-specific imports (`@noopjs/signals` except for signals that are used — keep the import for those symbols).
    - Keep user imports.
 
 2. **Component function:**
@@ -167,33 +167,33 @@ Use `pnpm workspaces`; compiler can be a separate Rust crate with a Node binding
      - If complex expression: create a computed as above, then effect.
 5. **Event handlers:**
    - `onClick={handler}` → do not attach directly. Instead:
-     - Generate a unique handler ID for this component instance and event type: `__aether_handler_map[compId + '_' + handlerId] = handler;`
-     - Set `el.setAttribute('data-aether-ev', handlerId + ':' + eventType)` (or use a combined data attribute).
+     - Generate a unique handler ID for this component instance and event type: `__noop_handler_map[compId + '_' + handlerId] = handler;`
+     - Set `el.setAttribute('data-noop-ev', handlerId + ':' + eventType)` (or use a combined data attribute).
    - The handler function body must be left in the component's scope so that it can be lazily loaded. The compiler will later split handlers into separate chunks (see Phase 3). For the core transform, the handler is just stored in a module-level `Map` (for SSR we'll serialize references, not functions). Actually, for resumability, we don't store functions on the server; we only ship handler IDs. So the compiler should instead:
      - In the output code, define the handler function as a named function in the component module.
-     - Register it in a global registry for the client build, but for SSR we just output the `data-aether-ev` attribute.
+     - Register it in a global registry for the client build, but for SSR we just output the `data-noop-ev` attribute.
    - Final rule: Transform `onEvent={handler}` to:
      ```js
      const __handlerId = '__compId_event_0';
-     __aether_register_event_handler(__handlerId, handler);
-     el.setAttribute('data-aether-ev', __handlerId);
+     __noop_register_event_handler(__handlerId, handler);
+     el.setAttribute('data-noop-ev', __handlerId);
      ```
-     The `__aether_register_event_handler` is a placeholder that the bundler/compiler will handle: during SSR, it serializes the handler ID, not the function. For client build, the function is bundled into a separate chunk and the mapping is stored. The core compiler only needs to insert the call and the attribute.
+     The `__noop_register_event_handler` is a placeholder that the bundler/compiler will handle: during SSR, it serializes the handler ID, not the function. For client build, the function is bundled into a separate chunk and the mapping is stored. The core compiler only needs to insert the call and the attribute.
 
 6. **Component composition:** `<Child prop={x} />`
-   - If `Child` is a known Aether component (another function), transform to:
+   - If `Child` is a known NoopJS component (another function), transform to:
      `const __child = Child({ prop: x, children: [] }); // returns Node`
      Then append the returned node to parent. The compiler must inline the call, or if the child is imported, generate `Child(props)` call.
    - The parent's return will build a tree.
    - For resumability, the parent-child relationship must be reflected in the serialized tree. This requires each component instance to have a unique component ID so that the server can map state to nodes. The compiler must generate a `componentId` for each component instantiation (incremented per module). So inside component body:
      `const __compId = '__module_0_comp_0';`
      Then children get increasing IDs: `__module_0_comp_1`, etc.
-     This ID is passed implicitly to children (via a hidden prop or closure) so that the whole tree is labeled. We'll define a convention: every component receives a `__aetherId` prop (hidden). The parent passes its own id + child index. In the output, the child call includes `__aetherId` prop. This is essential for SSR serialization.
+     This ID is passed implicitly to children (via a hidden prop or closure) so that the whole tree is labeled. We'll define a convention: every component receives a `__noopId` prop (hidden). The parent passes its own id + child index. In the output, the child call includes `__noopId` prop. This is essential for SSR serialization.
 
    - Simplified: The compiler wraps each component call with an auto-generated identifier that is used to scope signals and DOM nodes. For now, the compiler emits code to propagate IDs.
 
 **Test Plan for Compiler (Phase 1):**
-- Create a suite of `.aether.tsx` fixtures:
+- Create a suite of `.noop.tsx` fixtures:
   1. A simple component with static HTML: `export default function Foo() { return <div>hello</div>; }` → expect output to create a div and text node, return it.
   2. A component with a signal:
      ```tsx
@@ -204,12 +204,12 @@ Use `pnpm workspaces`; compiler can be a separate Rust crate with a Node binding
      ```
      Expected output: creates button, text node, effect that updates text, registers event handler with ID, sets data attribute.
   3. A component with computed attribute: `<div class={someSignal.get() ? 'a' : 'b'}>` → should produce computed and effect.
-  4. Nested components: parent renders child component; verify that child receives a `__aetherId` prop and that the compiler correctly calls the child function and appends result.
-- Write unit tests using `jest` or `vitest` that parse the transformed code as a string and assert presence of specific constructs (like `effect(() => { txt.nodeValue = count.get(); })`, `data-aether-ev` attribute, etc.). Better yet, execute the transformed code in a Node environment (with a minimal DOM shim) and check that the returned DOM structure matches expected, but that may require a full SSR later. For now, string matching suffices.
+  4. Nested components: parent renders child component; verify that child receives a `__noopId` prop and that the compiler correctly calls the child function and appends result.
+- Write unit tests using `jest` or `vitest` that parse the transformed code as a string and assert presence of specific constructs (like `effect(() => { txt.nodeValue = count.get(); })`, `data-noop-ev` attribute, etc.). Better yet, execute the transformed code in a Node environment (with a minimal DOM shim) and check that the returned DOM structure matches expected, but that may require a full SSR later. For now, string matching suffices.
 
 ### Phase 2: Server-Side Rendering (SSR) & Serialization Engine
 
-**Goal:** Render Aether components to HTML on the server (Node/Bun/Deno) and produce the serialized state required for client resumption.
+**Goal:** Render NoopJS components to HTML on the server (Node/Bun/Deno) and produce the serialized state required for client resumption.
 
 **Architecture:**
 - Create `packages/server` which exposes `renderToString(componentFn, props?)`.
@@ -235,7 +235,7 @@ After rendering a page, the server produces:
 ...
 <body>
   <!-- rendered HTML -->
-  <script id="__AETHER_STATE__" type="application/json">
+  <script id="__NOOP_STATE__" type="application/json">
     {
       "rootId": "c0",
       "components": {
@@ -262,7 +262,7 @@ After rendering a page, the server produces:
 ```
 But we can simplify: Because the client will simply "resume" the signal graph, we can serialize the state of all signals in a flat map (using the `componentId + signalName` as key), and for each effect that was active on the server, store the effect's code as a string (or better, an ID that maps to a client-side function). However, the original spec suggests serializing nodes and their dependency relationships. A better approach is to record for each dynamic node (text or attribute) a "binding" that links a signal path to an update operation. Since the client resumer knows the component code (it can be fetched lazily), we only need to serialize the *state* and a map of `elementId` → `signalPath` so the resumer can re-attach.
 
-Given that the framework is compiled, we can assume that the component's JS code (with effects) will be loaded on demand. So the serialization can be minimal: a mapping from node IDs (given by `data-aether-node` attributes in HTML) to the signal paths that drive them. For resumability, we do NOT need to serialize effects; we just need to restore the signals to their SSR state and then let the component's effects (when they eventually load) pick up and update the DOM. But that would mean hydration-like re-attach. True resumability avoids running component code. To achieve that, we need the client to *resume* the effect graph without executing component functions. This means we must serialize the structure of the reactive graph: which signal updates which node, and how. That's why serialization includes the binding between a node and a signal, plus an updater function. The updater function can be a simple template like `"Count is " + count.get()` that the client can evaluate using the signal. So the serialized state can contain:
+Given that the framework is compiled, we can assume that the component's JS code (with effects) will be loaded on demand. So the serialization can be minimal: a mapping from node IDs (given by `data-noop-node` attributes in HTML) to the signal paths that drive them. For resumability, we do NOT need to serialize effects; we just need to restore the signals to their SSR state and then let the component's effects (when they eventually load) pick up and update the DOM. But that would mean hydration-like re-attach. True resumability avoids running component code. To achieve that, we need the client to *resume* the effect graph without executing component functions. This means we must serialize the structure of the reactive graph: which signal updates which node, and how. That's why serialization includes the binding between a node and a signal, plus an updater function. The updater function can be a simple template like `"Count is " + count.get()` that the client can evaluate using the signal. So the serialized state can contain:
 
 - A list of "bindings": `{ nodeId: "txt_1", signalRef: "c0.count", updater: "txt_1.nodeValue = 'Count is ' + c0.count.get()" }` (where `c0.count` is a path to the signal).
 On the client, the resumer creates signals from state, then for each binding, creates an effect that runs the updater. That effectively resumes without re-running component logic.
@@ -270,17 +270,17 @@ On the client, the resumer creates signals from state, then for each binding, cr
 I'll refine the serialization to be an array of `Binding` objects, and a flat map of signal states.
 
 **Detailed SSR Implementation Steps:**
-1. Implement a global `ServerDOM` context: before rendering, set a global `__AETHER_SSR_CONTEXT` with an empty signal store and effect registrations.
+1. Implement a global `ServerDOM` context: before rendering, set a global `__NOOP_SSR_CONTEXT` with an empty signal store and effect registrations.
 2. Replace the global `document` with a `ServerDocument` shim.
-3. Patch `@aether/signals` to detect SSR mode: if `__AETHER_SSR_CONTEXT` exists, `signal()` creates an SSR signal that can be tracked for dependencies; `effect(fn)` pushes the effect into a list and immediately executes `fn` to produce initial DOM state (so text nodes and attributes reflect the current signal values).
+3. Patch `@noopjs/signals` to detect SSR mode: if `__NOOP_SSR_CONTEXT` exists, `signal()` creates an SSR signal that can be tracked for dependencies; `effect(fn)` pushes the effect into a list and immediately executes `fn` to produce initial DOM state (so text nodes and attributes reflect the current signal values).
 4. Execute the root component function, which returns the root DOM node (a `ServerElement`). Append it to the document body.
-5. After execution, collect all effects that were registered. For each effect, compute the dependency list (which signals were read) and generate an updater string: The updater must be a string of JavaScript code that, when `eval`'d in the client context (with the signal variables in scope), will perform the same DOM update. This is tricky because the effect body contains DOM references. But we can serialize the effect body as a function source and rely on the client having the same node IDs. Alternatively, we can record the *effect binding* in a higher-level representation: The compiler could have already output a mapping from effect index to a description of the node and attribute/text. That would be part of the compilation result. For Phase 2, to avoid overcomplicating the compiler, we can cheat: Have the SSR effect register a "binding" object that captures the target node (by its unique ID) and the updater function (as a string that uses signal references like `__sig_c0_count.get()`). The resumer will then create that effect on the client. We can achieve this by modifying the compiler: For each effect, instead of directly calling `effect(() => { el.textContent = ... })`, it calls a framework wrapper: `__aether_bind_text(el, () => signal.get())` or something. That wrapper during SSR records the binding; on client it sets up the effect. This is more robust.
-So the compiler must generate calls to `__aether_bind_*` functions instead of raw `effect`. That way, SSR can capture the binding metadata without stringifying function bodies. This is a better design, consistent with zero-runtime: the binding functions are only present in SSR and development; the client resumer uses them to replay effects.
+5. After execution, collect all effects that were registered. For each effect, compute the dependency list (which signals were read) and generate an updater string: The updater must be a string of JavaScript code that, when `eval`'d in the client context (with the signal variables in scope), will perform the same DOM update. This is tricky because the effect body contains DOM references. But we can serialize the effect body as a function source and rely on the client having the same node IDs. Alternatively, we can record the *effect binding* in a higher-level representation: The compiler could have already output a mapping from effect index to a description of the node and attribute/text. That would be part of the compilation result. For Phase 2, to avoid overcomplicating the compiler, we can cheat: Have the SSR effect register a "binding" object that captures the target node (by its unique ID) and the updater function (as a string that uses signal references like `__sig_c0_count.get()`). The resumer will then create that effect on the client. We can achieve this by modifying the compiler: For each effect, instead of directly calling `effect(() => { el.textContent = ... })`, it calls a framework wrapper: `__noop_bind_text(el, () => signal.get())` or something. That wrapper during SSR records the binding; on client it sets up the effect. This is more robust.
+So the compiler must generate calls to `__noop_bind_*` functions instead of raw `effect`. That way, SSR can capture the binding metadata without stringifying function bodies. This is a better design, consistent with zero-runtime: the binding functions are only present in SSR and development; the client resumer uses them to replay effects.
 
 **Revised Compiler Output (updated Phase 1):**
 Instead of raw `effect(() => { ... })`, the compiler outputs:
 ```js
-import { bindText, bindAttribute, bindEvent } from '@aether/runtime';
+import { bindText, bindAttribute, bindEvent } from '@noopjs/runtime';
 ...
 const txt = document.createTextNode('');
 bindText(txt, () => count.get()); // for static wrapper
@@ -293,9 +293,9 @@ Then SSR's `bindText` on server: it immediately runs the getter to set initial t
 I think it's acceptable that the client loads a tiny "resumer" that can parse a binding descriptor and re-attach. The binding descriptor will be generated by the compiler as a static map in the output: For each component, the compiler emits a list of bindings with their dependencies. This list is embedded in the server HTML and used by the resumer without loading component code. This is essentially the "resumability metadata". So the compiler must produce a JSON-like structure per component that describes effects. This is the path we'll follow.
 
 **Specification for Phase 2 (SSR & Serialization) with compiler tweak:**
-- Update compiler: For each component, alongside the output JS, also produce a `manifest.json` (or embed in the JS) that lists for each effect a binding descriptor: `{ type: 'text', nodePath: 'c0[0]', signal: 'count', transform: 'identity' }`. `transform` could be a simple expression template. To keep it simple, the compiler will generate code that calls a registration function with a descriptor object. The SSR engine will then collect these descriptors and serialize them into `__AETHER_BINDINGS__`.
-- In SSR, when executing the component, the `bindText` and `bindAttribute` functions will record these descriptors along with the node's unique ID (set via `data-aether-node`). After rendering, the server outputs the bindings array and initial signal state.
-- Client resumer then just reads the bindings, creates signals from state, and for each binding sets up a direct effect using the simple descriptors (like `effect(() => { document.querySelector('[data-aether-node="..."]').nodeValue = signal.get(); })`). That is resumability without any component code.
+- Update compiler: For each component, alongside the output JS, also produce a `manifest.json` (or embed in the JS) that lists for each effect a binding descriptor: `{ type: 'text', nodePath: 'c0[0]', signal: 'count', transform: 'identity' }`. `transform` could be a simple expression template. To keep it simple, the compiler will generate code that calls a registration function with a descriptor object. The SSR engine will then collect these descriptors and serialize them into `__NOOP_BINDINGS__`.
+- In SSR, when executing the component, the `bindText` and `bindAttribute` functions will record these descriptors along with the node's unique ID (set via `data-noop-node`). After rendering, the server outputs the bindings array and initial signal state.
+- Client resumer then just reads the bindings, creates signals from state, and for each binding sets up a direct effect using the simple descriptors (like `effect(() => { document.querySelector('[data-noop-node="..."]').nodeValue = signal.get(); })`). That is resumability without any component code.
 
 This approach is clean and adheres to zero-runtime: The bindings descriptors are generated at compile time, serialized into the HTML. The resumer is a ~1KB engine that reads them and wires the page. No component functions are ever sent to the client unless the page is interactive. Interactive event handlers are lazily loaded. For attribute bindings, similar descriptor.
 
@@ -318,17 +318,17 @@ Thus, Phase 2 requires modifying the compiler to emit binding descriptors instea
      - For `{someSignal}` → `bindText(node, someSignal)`
      - For `{complexExpr}` → `const __computedExpr = computed(() => complexExpr); bindText(node, __computedExpr);` and the binding descriptor will reference that computed signal.
    - This means the binding descriptors only need `signalRef`, which is a path to the signal (which will be serialized in state).
-3. Implement `bindText`, `bindAttribute` in `@aether/runtime` (SSR version):
-   - In SSR, `bindText(node, signal)`: set `node.nodeValue = signal.get()` immediately, then record a binding `{ nodeId: node._aetherNodeId, type: 'text', signalRef: signal._aetherSignalPath }`. The signal must have a `_aetherSignalPath` set by the SSR context.
+3. Implement `bindText`, `bindAttribute` in `@noopjs/runtime` (SSR version):
+   - In SSR, `bindText(node, signal)`: set `node.nodeValue = signal.get()` immediately, then record a binding `{ nodeId: node._noopNodeId, type: 'text', signalRef: signal._noopSignalPath }`. The signal must have a `_noopSignalPath` set by the SSR context.
    - `bindAttribute(el, name, signal)`: similar, record attribute binding.
-4. Implement SSR context: Before rendering, start a new context that assigns auto-incrementing node IDs to every created DOM node (in the shim) and assigns signal paths when `signal()` is called. Signal paths are built as `compId.signalName` where `signalName` is derived from variable name (compiler provides). The compiler must emit a hidden `__aetherCreateSignal(initialValue, 'name')` instead of direct `signal()` call, so that SSR can capture the path. So modify compiler: replace `signal(0)` with `__aetherCreateSignal(0, 'count', __compId)` where `__compId` is the component instance ID. This call is then defined in `@aether/runtime` to create a signal and attach the path. In client, it's just a signal with path info for debugging.
-5. After rendering, collect all bindings and signal states (current values of all signals). Serialize to JSON in the `__AETHER_STATE__` script.
-6. Include in the HTML `data-aether-node` attributes on elements that have bindings, with the node ID.
+4. Implement SSR context: Before rendering, start a new context that assigns auto-incrementing node IDs to every created DOM node (in the shim) and assigns signal paths when `signal()` is called. Signal paths are built as `compId.signalName` where `signalName` is derived from variable name (compiler provides). The compiler must emit a hidden `__noopCreateSignal(initialValue, 'name')` instead of direct `signal()` call, so that SSR can capture the path. So modify compiler: replace `signal(0)` with `__noopCreateSignal(0, 'count', __compId)` where `__compId` is the component instance ID. This call is then defined in `@noopjs/runtime` to create a signal and attach the path. In client, it's just a signal with path info for debugging.
+5. After rendering, collect all bindings and signal states (current values of all signals). Serialize to JSON in the `__NOOP_STATE__` script.
+6. Include in the HTML `data-noop-node` attributes on elements that have bindings, with the node ID.
 7. The root node gets an ID `root`.
 
 **Test Plan for Phase 2:**
-- Unit test SSR with a simple counter component: verify HTML contains `<button data-aether-ev="..." data-aether-node="...">Count is 0</button>`.
-- Verify that `__AETHER_STATE__` contains the signal `root.c0.count: 0` and a binding for the text node linking to that signal.
+- Unit test SSR with a simple counter component: verify HTML contains `<button data-noop-ev="..." data-noop-node="...">Count is 0</button>`.
+- Verify that `__NOOP_STATE__` contains the signal `root.c0.count: 0` and a binding for the text node linking to that signal.
 - Render a parent-child component, verify state hierarchy.
 - Check that event handlers do not appear as functions; only handler IDs are in the state.
 
@@ -339,22 +339,22 @@ Thus, Phase 2 requires modifying the compiler to emit binding descriptors instea
 **`packages/client` Implementation:**
 - The resumer code is a standalone IIFE (no imports from signals package? Possibly inline the minimal signal creation). To keep it tiny, we can include a minimal signals implementation inline (or import a pre-bundled signals core). The resumer must not depend on any framework packages; it's a standalone script that will be inlined in the HTML or served as a static file.
 - Steps on page load:
-  1. Parse `document.getElementById('__AETHER_STATE__')` JSON.
+  1. Parse `document.getElementById('__NOOP_STATE__')` JSON.
   2. Create a global signal registry: a Map from signal path to signal instance.
   3. For each signal entry in state, `let sig = signal(stateValue); sig._path = path;` store in map.
-  4. Process bindings array: for each binding, find the node using `document.querySelector('[data-aether-node="ID"]')` (or if we set IDs as `a0`, we can use `document.getElementById` for speed; we'll assign `id` attributes automatically during SSR). Then:
+  4. Process bindings array: for each binding, find the node using `document.querySelector('[data-noop-node="ID"]')` (or if we set IDs as `a0`, we can use `document.getElementById` for speed; we'll assign `id` attributes automatically during SSR). Then:
      - If binding type is 'text', get the signal reference, create an effect: `effect(() => { node.nodeValue = sig.get(); })`.
      - If attribute: similar, but `node.setAttribute(attrName, sig.get())`.
      These effects must be batched, so we need the effect scheduler from signals. The resumer will include a small signal runtime.
   5. After all bindings, the page is live and reactive.
 - **Event Delegation for Lazy Handlers:**
   - Set up a global event delegation on `document` for common events (`click`, `input`, etc.). Use event capturing or bubbling.
-  - On event, check `event.target` and traverse up to find `data-aether-ev` attribute.
-  - Extract the handler ID: `<element data-aether-ev="h0">`.
-  - Look up handler metadata from `__AETHER_STATE__.handlers`: `{ "h0": { "eventType": "click", "chunk": "/_aether/h0.js" } }`.
-  - If handler chunk is not already loaded, dynamically `import(chunk)` (using a pre-configured chunk map, not a file path; the server will have a route to serve handler chunks). The import returns a module with a default function (the handler). Then remove the event delegation for that specific element and attach the handler directly to avoid delegation overhead. But the handler may close over component state? The handler needs access to the signals it uses. How does it get them? Because the handler code was originally inside the component function, it references signals via closure. For the handler to work, it must be able to reach those signals. That means the handler chunk must be generated by bundling the component's handler functions, but they need to be linked to the same signal instances. This requires that the signal instances are stored in a module-level variable that the handler chunk can access. So during bundling, we must ensure that the handler code, when loaded, will use the same signal registry. One solution: the resumer initializes a global `__AETHER_SIGNALS` object that maps signal paths to signal objects. The handler chunk, upon loading, will look up the signals it needs from that registry, not from closures. Therefore, the compiler must transform handler functions to use signal registry lookups instead of direct closure variables. This is a significant but necessary step.
+  - On event, check `event.target` and traverse up to find `data-noop-ev` attribute.
+  - Extract the handler ID: `<element data-noop-ev="h0">`.
+  - Look up handler metadata from `__NOOP_STATE__.handlers`: `{ "h0": { "eventType": "click", "chunk": "/_noop/h0.js" } }`.
+  - If handler chunk is not already loaded, dynamically `import(chunk)` (using a pre-configured chunk map, not a file path; the server will have a route to serve handler chunks). The import returns a module with a default function (the handler). Then remove the event delegation for that specific element and attach the handler directly to avoid delegation overhead. But the handler may close over component state? The handler needs access to the signals it uses. How does it get them? Because the handler code was originally inside the component function, it references signals via closure. For the handler to work, it must be able to reach those signals. That means the handler chunk must be generated by bundling the component's handler functions, but they need to be linked to the same signal instances. This requires that the signal instances are stored in a module-level variable that the handler chunk can access. So during bundling, we must ensure that the handler code, when loaded, will use the same signal registry. One solution: the resumer initializes a global `__NOOP_SIGNALS` object that maps signal paths to signal objects. The handler chunk, upon loading, will look up the signals it needs from that registry, not from closures. Therefore, the compiler must transform handler functions to use signal registry lookups instead of direct closure variables. This is a significant but necessary step.
 
-  - Revised compiler rule: Every handler function body is rewritten to replace direct signal variable references with `__aether_getSignal(compId, 'signalName')`. This ensures the handler chunk can be fully independent and just use the global signal store. The compiler will do this transformation.
+  - Revised compiler rule: Every handler function body is rewritten to replace direct signal variable references with `__noop_getSignal(compId, 'signalName')`. This ensures the handler chunk can be fully independent and just use the global signal store. The compiler will do this transformation.
   - Then the lazy loading: `import(chunk)` returns a setup function that registers the handler to the global map. The resumer can call that setup, then invoke the handler when event occurs.
   - Simpler approach (used by Qwik): The handler chunk exports a symbol (a function) that, when called, returns the handler function, which closes over the signals because the closure is serialized and restored. Qwik serializes the closures entirely. We could adopt a similar approach: serialize the handler's scope (signal references) so that the handler chunk, when executed, reconstructs the closures. That's complex. The cleaner path: the compiler should not rely on closure over signals; instead, make all signal usage explicit via a reactive scope. However, that would break the developer experience.
 
@@ -362,17 +362,17 @@ Thus, Phase 2 requires modifying the compiler to emit binding descriptors instea
 
   I think the best path, consistent with resumability, is: Handlers are compiled to standalone functions that take an argument `{ signals }` where `signals` is a map of the signals they need. The resumer, when loading a handler chunk, calls the handler with a prepared signals object. The compiler will extract from the handler which signals it reads (by scanning the AST) and emit the handler function with those signals as parameters. This is possible and deterministic.
 
-  So final rule: For each event handler, the compiler produces a separate function that takes a `__aether_signals` object, and the handler body uses `__aether_signals.signalName` instead of local variables. This function is placed in a separate chunk. The lazy loader will fetch the chunk, then execute the handler with the appropriate signal map for that component instance. This works beautifully.
+  So final rule: For each event handler, the compiler produces a separate function that takes a `__noop_signals` object, and the handler body uses `__noop_signals.signalName` instead of local variables. This function is placed in a separate chunk. The lazy loader will fetch the chunk, then execute the handler with the appropriate signal map for that component instance. This works beautifully.
 
-  - Implementation: During compilation, for each `onEvent={expr}` where `expr` is a function expression or identifier, extract the function's AST, find all signal variable reads (variables that were created via `signal()` in the component scope), replace them with `__aether_signals['signalName'].get()` or `.set(...)`. Then output a separate chunk module: `export default function handler(__aether_signals) { ... }`. The chunk filename is generated based on a hash of the function.
+  - Implementation: During compilation, for each `onEvent={expr}` where `expr` is a function expression or identifier, extract the function's AST, find all signal variable reads (variables that were created via `signal()` in the component scope), replace them with `__noop_signals['signalName'].get()` or `.set(...)`. Then output a separate chunk module: `export default function handler(__noop_signals) { ... }`. The chunk filename is generated based on a hash of the function.
 
   - The SSR serialization will include a mapping from handler ID to chunk URL and a list of required signal names for that handler. The resumer can then pre-fetch or lazily load.
 
 **Phase 3 Tasks:**
 - Implement the resumer script (`packages/client/src/resumer.ts`). It must be compiled to a self-contained IIFE with signals runtime inlined (or import signals and bundle with zero external deps).
-- Resumer API: `window.__AETHER_init()`, called on script load.
+- Resumer API: `window.__NOOP_init()`, called on script load.
 - Handle bindings: for each binding descriptor, create effect as described.
-- Event delegation setup: add a global event listener on `document` for common types. On event, extract `data-aether-ev`, look up handler metadata from `__AETHER_STATE__.handlers`. If chunk not loaded, dynamically import chunk URL. The chunk exports a default function `(signals) => void`. The resumer then creates a scope with the required signals (from the global registry) and invokes the handler. Optionally, after first invocation, the resumer can replace the event delegation with a direct listener on the element to avoid future delegation overhead (and to allow event removal).
+- Event delegation setup: add a global event listener on `document` for common types. On event, extract `data-noop-ev`, look up handler metadata from `__NOOP_STATE__.handlers`. If chunk not loaded, dynamically import chunk URL. The chunk exports a default function `(signals) => void`. The resumer then creates a scope with the required signals (from the global registry) and invokes the handler. Optionally, after first invocation, the resumer can replace the event delegation with a direct listener on the element to avoid future delegation overhead (and to allow event removal).
 - Build the signal registry: on init, create signals from state. Each signal is stored with its path.
 - The resumer must also handle effects created by bindings; these effects might need to be disposed if the component is removed (not needed initially, as full page navigation will re-run resumer on new page).
 
@@ -388,35 +388,35 @@ Thus, Phase 2 requires modifying the compiler to emit binding descriptors instea
 **Architecture:**
 - Route definitions derived from `src/routes/` directory structure (convention).
 - Each route module exports a default component (page).
-- Nested layouts: A file like `layout.aether.tsx` in a directory wraps child pages. Similar to SvelteKit or Next.js App Router.
+- Nested layouts: A file like `layout.noop.tsx` in a directory wraps child pages. Similar to SvelteKit or Next.js App Router.
 - Server intercepts all requests. For initial page load, it renders the route component using SSR (Phase 2), sending full HTML.
 - For subsequent client navigations (click on `<a>` tags), the client intercepts the click, performs a fetch to the new page URL with a header `Accept: text/html` but expects a partial HTML response (just the `<body>` content). The server, detecting a fetch with a special header, renders only the target route's content, not the full document shell. The client then swaps the content using `document.startViewTransition()`.
 
 **File-system Routing Rules:**
-- `src/routes/index.aether.tsx` → `/`
-- `src/routes/about.aether.tsx` → `/about`
-- `src/routes/blog/[slug].aether.tsx` → `/blog/:slug`
-- Nested layouts: `src/routes/dashboard/layout.aether.tsx` wraps `dashboard/page.aether.tsx` and sub-routes.
+- `src/routes/index.noop.tsx` → `/`
+- `src/routes/about.noop.tsx` → `/about`
+- `src/routes/blog/[slug].noop.tsx` → `/blog/:slug`
+- Nested layouts: `src/routes/dashboard/layout.noop.tsx` wraps `dashboard/page.noop.tsx` and sub-routes.
 - The server must resolve the component for a given URL, compile/execute it, and produce HTML.
 
 **Client Navigation Steps (Resumer Extension):**
 - The resumer (or a small router script included) attaches click listeners on all `<a>` elements that have same-origin hrefs (or internal links).
 - On click, prevent default, call `router.navigate(href)`.
 - Navigation flow:
-  1. `fetch(href, { headers: { 'X-Aether-Navigate': '1' } })` – the server responds with a JSON payload containing:
+  1. `fetch(href, { headers: { 'X-Noop-Navigate': '1' } })` – the server responds with a JSON payload containing:
      - `html`: string of the new page's inner HTML (body content).
      - `state`: updated serialized state for the new page's components (signals, bindings).
      - `handlers`: handler map for the new page.
   2. Wrap DOM swap in `document.startViewTransition(async () => { ... })`:
      - Parse the new HTML into a temporary container.
      - Replace the content of the current page's root layout slot (e.g., `<main>`) with the new HTML.
-     - Load the new resumability state: call `__AETHER_applyState(newState)` to update signal registry and re-create bindings (while disposing old effects). The resumer should support hot-swapping state for a sub-tree.
+     - Load the new resumability state: call `__NOOP_applyState(newState)` to update signal registry and re-create bindings (while disposing old effects). The resumer should support hot-swapping state for a sub-tree.
   3. The browser handles the transition animation.
 - This provides seamless page transitions.
 
 **Server Implementation:**
 - The server package will include a production-ready Node server (or adapter for Bun/Deno).
-- On request with `X-Aether-Navigate`, respond with JSON instead of full HTML.
+- On request with `X-Noop-Navigate`, respond with JSON instead of full HTML.
 - Full HTML page on initial load includes resumer script and router bootstrap.
 
 **Test Plan for Phase 4:**
@@ -444,10 +444,10 @@ Thus, Phase 2 requires modifying the compiler to emit binding descriptors instea
 
 ### Phase 6: Web Components Interop
 
-**Goal:** Allow Aether components to be exported as standard custom elements, usable without the framework.
+**Goal:** Allow NoopJS components to be exported as standard custom elements, usable without NoopJS (NoopJS).
 
 **Implementation:**
-- Use a compiler directive: if component file contains `// @aether customElement 'my-counter'`, the compiler generates an additional wrapper class.
+- Use a compiler directive: if component file contains `// @noopjs customElement 'my-counter'`, the compiler generates an additional wrapper class.
 - The custom element class extends `HTMLElement`, and in `connectedCallback`:
   - Create a shadow root (optional) or use light DOM.
   - Execute the component function (which returns a DOM node) and append it.
@@ -469,7 +469,7 @@ The compiler must split each event handler into its own chunk, with a determinis
 All state values must be JSON-serializable (strings, numbers, booleans, null, arrays, objects). Complex objects like Date, Map, Set are not supported initially. Signals holding non-serializable values will throw during SSR.
 
 ### Bundling and Development Environment
-We'll provide a `@aether/cli` that wraps Vite with the compiler plugin, dev server, and SSR support. However, the spec focuses on the framework internals; the CLI can be built after Phase 3.
+We'll provide a `@noopjs/cli` that wraps Vite with the compiler plugin, dev server, and SSR support. However, the spec focuses on the framework internals; the CLI can be built after Phase 3.
 
 ---
 
@@ -486,4 +486,4 @@ At each phase, verify tests pass before proceeding. If any test fails, debug and
 
 ---
 
-This expanded specification fills every gap. An AI coding agent following it step by step, with the given constraints, will produce a fully functional AetherJS framework that embodies the next decade's frontend architecture. I've remained faithful to your original design while providing the necessary rigor for machine-executable implementation.
+This expanded specification fills every gap. An AI coding agent following it step by step, with the given constraints, will produce a fully functional NoopJS framework that embodies the next decade's frontend architecture. I've remained faithful to your original design while providing the necessary rigor for machine-executable implementation.

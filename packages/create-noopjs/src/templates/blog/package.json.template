@@ -9,11 +9,11 @@
     "ssr": "tsx server.ts"
   },
   "dependencies": {
-    "@aether/client": "^0.0.1",
-    "@aether/runtime": "^0.0.1",
-    "@aether/server": "^0.0.1",
-    "@aether/signals": "^0.0.1",
-    "@aether/vite": "^0.0.1",
+    "@noopjs/client": "^0.0.1",
+    "@noopjs/runtime": "^0.0.1",
+    "@noopjs/server": "^0.0.1",
+    "@noopjs/signals": "^0.0.1",
+    "@noopjs/vite": "^0.0.1",
     "vite": "^6.0.0"
   },
   "devDependencies": {

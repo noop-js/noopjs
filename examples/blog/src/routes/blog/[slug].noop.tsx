@@ -31,7 +31,7 @@ export default function BlogPost({ slug }: { slug: string }) {
       <nav style={{ display: 'flex', gap: 'token.spacing.6', paddingTop: 'token.spacing.4', paddingBottom: 'token.spacing.4', borderBottom: '2px solid #e2e8f0', marginBottom: 'token.spacing.8' }}>
         <a href="/" className={styles.link}>Home</a>
         <a href="/about" className={styles.link}>About</a>
-        <a href="/blog/hello-noop" className={styles.link}>Hello Aether</a>
+        <a href="/blog/hello-noop" className={styles.link}>Hello NoopJS</a>
         <a href="/blog/signals-explained" className={styles.link}>Signals</a>
       </nav>
 
@@ -39,7 +39,7 @@ export default function BlogPost({ slug }: { slug: string }) {
       <div style={{ color: '#94a3b8', fontSize: '14px', marginBottom: 'token.spacing.6' }}>{date}</div>
       <div className={styles.body}>{content}</div>
 
-      <footer className={styles.footer} style={{ marginTop: '48px', paddingTop: 'token.spacing.6', paddingBottom: 'token.spacing.6', borderTop: '2px solid #e2e8f0' }}>Powered by Aether</footer>
+      <footer className={styles.footer} style={{ marginTop: '48px', paddingTop: 'token.spacing.6', paddingBottom: 'token.spacing.6', borderTop: '2px solid #e2e8f0' }}>Powered by NoopJS</footer>
     </div>
   );
 }

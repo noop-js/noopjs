@@ -101,17 +101,17 @@ export function getPerformanceMetrics(): Record<string, number> {
       metrics[m.name] = m.duration;
     }
   }
-  perf.clearMarks('aether:ssr:');
-  perf.clearMeasures('aether:ssr:');
+  perf.clearMarks('noop:ssr:');
+  perf.clearMeasures('noop:ssr:');
   return metrics;
 }
 
 export function getNodeId(node: ServerElement | ServerTextNode): string {
   const ctx = activeContext;
   if (!ctx) return '';
-  if ((node as any)._aetherNodeId) return (node as any)._aetherNodeId;
+  if ((node as any)._noopNodeId) return (node as any)._noopNodeId;
   const id = 'n' + (ctx.nodeIdCounter++);
-  (node as any)._aetherNodeId = id;
+  (node as any)._noopNodeId = id;
   return id;
 }
 

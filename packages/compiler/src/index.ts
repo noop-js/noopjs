@@ -475,6 +475,7 @@ function genDomElement(el: t.JSXElement, tagName: string, depth: number): GenRes
   for (const attr of el.openingElement.attributes) {
     if (t.isJSXAttribute(attr)) {
       const attrName = t.isJSXIdentifier(attr.name) ? attr.name.name : '';
+      if (attrName === 'key') continue;
       if (attrName === 'class' || attrName === 'className') {
         if (!attr.value) {
           // noop
@@ -635,7 +636,14 @@ function genComponent(el: t.JSXElement, tagName: string, depth: number): GenResu
       } else if (t.isStringLiteral(attr.value)) {
         explicitProps.push(`${attrName}: ${JSON.stringify(attr.value.value)}`);
       } else if (t.isJSXExpressionContainer(attr.value)) {
-        explicitProps.push(`${attrName}: ${generate(attr.value.expression).code}`);
+        if (t.isJSXElement(attr.value.expression) || t.isJSXFragment(attr.value.expression)) {
+          const result = t.isJSXElement(attr.value.expression)
+            ? genJSXElement(attr.value.expression, depth + 1)
+            : genJSXFragment(attr.value.expression, depth + 1);
+          explicitProps.push(`${attrName}: (() => { ${result.code}; return ${result.var}; })()`);
+        } else {
+          explicitProps.push(`${attrName}: ${generate(attr.value.expression).code}`);
+        }
       }
     } else if (t.isJSXSpreadAttribute(attr)) {
       hasSpread = true;
@@ -900,9 +908,52 @@ function genConditionalExpression(
 
   if (!hasJSXConsequent && !hasJSXAlternate) return false;
 
-  const cv = v('cond');
   const testCode = generate(expr.test).code;
 
+  // Check if test involves signals → need reactive binding
+  const sigs = findSignalNames(expr.test);
+  if (sigs.length > 0) {
+    importedRuntimeFns.add('bindCondition');
+    const consVar = v('cons');
+    const altVar = v('alt');
+    const consLines: string[] = [];
+    const altLines: string[] = [];
+
+    if (t.isNullLiteral(expr.consequent)) {
+      consLines.push(`${indent(depth + 1)}return document.createComment('');`);
+    } else if (t.isJSXElement(expr.consequent)) {
+      const result = genJSXElement(expr.consequent, depth + 1);
+      consLines.push(result.code);
+      consLines.push(`${indent(depth + 1)}return ${result.var};`);
+    } else if (t.isJSXFragment(expr.consequent)) {
+      const result = genJSXFragment(expr.consequent, depth + 1);
+      consLines.push(result.code);
+      consLines.push(`${indent(depth + 1)}return ${result.var};`);
+    } else {
+      consLines.push(`${indent(depth + 1)}return document.createTextNode(String(${generate(expr.consequent).code}));`);
+    }
+
+    if (t.isNullLiteral(expr.alternate)) {
+      altLines.push(`${indent(depth + 1)}return document.createComment('');`);
+    } else if (t.isJSXElement(expr.alternate)) {
+      const result = genJSXElement(expr.alternate, depth + 1);
+      altLines.push(result.code);
+      altLines.push(`${indent(depth + 1)}return ${result.var};`);
+    } else if (t.isJSXFragment(expr.alternate)) {
+      const result = genJSXFragment(expr.alternate, depth + 1);
+      altLines.push(result.code);
+      altLines.push(`${indent(depth + 1)}return ${result.var};`);
+    } else {
+      altLines.push(`${indent(depth + 1)}return document.createTextNode(String(${generate(expr.alternate).code}));`);
+    }
+
+    lines.push(`${indent(depth)}const ${consVar} = () => {\n${consLines.join('\n')}\n${indent(depth)}};`);
+    lines.push(`${indent(depth)}const ${altVar} = () => {\n${altLines.join('\n')}\n${indent(depth)}};`);
+    lines.push(`${indent(depth)}bindCondition(${pv}, () => ${testCode}, ${consVar}, ${altVar});`);
+    return true;
+  }
+
+  const cv = v('cond');
   lines.push(`${indent(depth)}let ${cv};`);
   lines.push(`${indent(depth)}if (${testCode}) {`);
 
@@ -954,7 +1005,30 @@ function genLogicalExpression(
   const cv = v('lcond');
   const testCode = generate(expr.left).code;
 
+  // Check if left side involves signals → need reactive binding
+  const sigs = findSignalNames(expr.left);
+
   if (op === '&&') {
+    if (sigs.length > 0) {
+      importedRuntimeFns.add('bindCondition');
+      const thunkVar = v('thunk');
+      let thunkBody: string;
+      if (t.isJSXElement(expr.right)) {
+        const result = genJSXElement(expr.right, depth + 1);
+        thunkBody = `${result.code}\n${indent(depth + 1)}return ${result.var};`;
+      } else if (t.isJSXFragment(expr.right)) {
+        const result = genJSXFragment(expr.right, depth + 1);
+        thunkBody = `${result.code}\n${indent(depth + 1)}return ${result.var};`;
+      } else {
+        thunkBody = `${indent(depth + 1)}return document.createComment('');`;
+      }
+      const elseThunk = v('ethunk');
+      lines.push(`${indent(depth)}const ${thunkVar} = () => {\n${thunkBody}\n${indent(depth)}};`);
+      lines.push(`${indent(depth)}const ${elseThunk} = () => document.createComment('');`);
+      lines.push(`${indent(depth)}bindCondition(${pv}, () => ${testCode}, ${thunkVar}, ${elseThunk});`);
+      return true;
+    }
+
     lines.push(`${indent(depth)}const ${testVar} = ${testCode};`);
     lines.push(`${indent(depth)}let ${cv};`);
     lines.push(`${indent(depth)}if (${testVar}) {`);
@@ -975,6 +1049,26 @@ function genLogicalExpression(
   }
 
   if (op === '||') {
+    if (sigs.length > 0) {
+      importedRuntimeFns.add('bindCondition');
+      const elseThunk = v('ethunk');
+      let elseBody: string;
+      if (t.isJSXElement(expr.right)) {
+        const result = genJSXElement(expr.right, depth + 1);
+        elseBody = `${result.code}\n${indent(depth + 1)}return ${result.var};`;
+      } else if (t.isJSXFragment(expr.right)) {
+        const result = genJSXFragment(expr.right, depth + 1);
+        elseBody = `${result.code}\n${indent(depth + 1)}return ${result.var};`;
+      } else {
+        elseBody = `${indent(depth + 1)}return document.createComment('');`;
+      }
+      const emptyThunk = v('mthunk');
+      lines.push(`${indent(depth)}const ${emptyThunk} = () => document.createComment('');`);
+      lines.push(`${indent(depth)}const ${elseThunk} = () => {\n${elseBody}\n${indent(depth)}};`);
+      lines.push(`${indent(depth)}bindCondition(${pv}, () => ${testCode}, ${emptyThunk}, ${elseThunk});`);
+      return true;
+    }
+
     lines.push(`${indent(depth)}const ${testVar} = ${testCode};`);
     lines.push(`${indent(depth)}let ${cv};`);
     lines.push(`${indent(depth)}if (${testVar}) {`);
