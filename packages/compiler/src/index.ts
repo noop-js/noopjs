@@ -156,7 +156,7 @@ export function compile(source: string, options: CompileOptions = {}): CompileRe
     },
     ExportNamedDeclaration(path) {
       const decl = path.node.declaration;
-      if (t.isFunctionDeclaration(decl) && decl.id) {
+      if (t.isFunctionDeclaration(decl) && decl.id && !compName) {
         compName = decl.id.name;
       }
     },
@@ -182,31 +182,22 @@ export function compile(source: string, options: CompileOptions = {}): CompileRe
       if (t.isFunctionDeclaration(decl) && decl.id) {
         const fnName = decl.id.name;
         if (fnName !== compName) {
-          // Strip TypeScript annotations from params and return type
-          const params = decl.params.map(p => {
-            if (t.isIdentifier(p)) return p.name;
-            if (t.isAssignmentPattern(p) && t.isIdentifier(p.left)) return `${p.left.name} = ${generate(p.right).code}`;
-            return generate(p).code;
-          }).join(', ');
-          const bodyCode = decl.body ? generate(decl.body).code : '{}';
-          const asyncPrefix = decl.async ? 'async ' : '';
-          helperFns.push(`export ${asyncPrefix}function ${fnName}(${params}) ${bodyCode}`);
+          const innerFns: string[] = [];
+          processHelperFn(decl, fnName, innerFns);
+          if (innerFns.length > 0) {
+            helperFns.push(`export ${innerFns[0]}`);
+          }
         }
       }
     },
     FunctionDeclaration(path) {
-      // Module-level function declarations (helper components)
+      // Module-level function declarations — skip if inside a named export
+      // (handled by ExportNamedDeclaration) or if nested inside another function
       if (!path.node.id || path.getFunctionParent()) return;
+      if (path.findParent(p => t.isExportNamedDeclaration(p.node))) return;
       const fnName = path.node.id.name;
       if (fnName !== compName) {
-        const params = path.node.params.map(p => {
-          if (t.isIdentifier(p)) return p.name;
-          if (t.isAssignmentPattern(p) && t.isIdentifier(p.left)) return `${p.left.name} = ${generate(p.right).code}`;
-          return generate(p).code;
-        }).join(', ');
-        const bodyCode = path.node.body ? generate(path.node.body).code : '{}';
-        const asyncPrefix = path.node.async ? 'async ' : '';
-        helperFns.push(`${asyncPrefix}function ${fnName}(${params}) ${bodyCode}`);
+        processHelperFn(path.node, fnName, helperFns);
       }
     },
   });
@@ -238,10 +229,7 @@ export function compile(source: string, options: CompileOptions = {}): CompileRe
   const userImports: string[] = [];
   traverse(ast, {
     ImportDeclaration(path) {
-      const src = path.node.source.value;
-      if (src !== '@noopjs/signals') {
-        userImports.push(generate(path.node).code);
-      }
+      userImports.push(generate(path.node).code);
     },
   });
 
@@ -1174,6 +1162,54 @@ function genLogicalExpression(
     return true;
   }
 
+  return false;
+}
+
+function processHelperFn(node: t.FunctionDeclaration, fnName: string, helperFns: string[]): void {
+  const asyncPrefix = node.async ? 'async ' : '';
+  const params = node.params.map(p => {
+    if (t.isIdentifier(p)) return p.name;
+    if (t.isAssignmentPattern(p) && t.isIdentifier(p.left)) return `${p.left.name} = ${generate(p.right).code}`;
+    return generate(p).code;
+  }).join(', ');
+
+  if (!node.body) {
+    helperFns.push(`${asyncPrefix}function ${fnName}(${params}) {}`);
+    return;
+  }
+
+  // Check if function body contains JSX
+  const block = node.body as t.BlockStatement;
+  let hasJSX = false;
+  for (const stmt of block.body) {
+    if (stmtContainsJSX(stmt)) { hasJSX = true; break; }
+  }
+
+  if (hasJSX) {
+    const processedStmts: string[] = [];
+    for (const stmt of block.body) {
+      const processed = processStatement(stmt, 1);
+      if (processed) processedStmts.push(processed);
+    }
+    helperFns.push(`${asyncPrefix}function ${fnName}(${params}) {\n${processedStmts.join('\n')}\n}`);
+  } else {
+    const bodyCode = generate(node.body).code;
+    helperFns.push(`${asyncPrefix}function ${fnName}(${params}) ${bodyCode}`);
+  }
+}
+
+function stmtContainsJSX(stmt: t.Node): boolean {
+  if (t.isJSXElement(stmt) || t.isJSXFragment(stmt)) return true;
+  for (const key of t.VISITOR_KEYS[stmt.type] || []) {
+    const val = (stmt as any)[key];
+    if (Array.isArray(val)) {
+      for (const item of val) {
+        if (item && typeof item.type === 'string' && stmtContainsJSX(item)) return true;
+      }
+    } else if (val && typeof val.type === 'string') {
+      if (stmtContainsJSX(val)) return true;
+    }
+  }
   return false;
 }
 
