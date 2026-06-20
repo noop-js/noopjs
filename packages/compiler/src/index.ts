@@ -54,6 +54,7 @@ let bindings: BindingDescriptor[] = [];
 let handlers: HandlerDescriptor[] = [];
 let importedRuntimeFns: Set<string>;
 let signalVars: Set<string>;
+let importedNames: Set<string>;
 let compName: string;
 let compIdStr: string;
 let currentCompId: string;
@@ -75,6 +76,7 @@ function reset(): void {
   handlers = [];
   importedRuntimeFns = new Set();
   signalVars = new Set();
+  importedNames = new Set();
   compName = '';
   compIdStr = '';
   currentCompId = '';
@@ -132,6 +134,18 @@ export function compile(source: string, options: CompileOptions = {}): CompileRe
           if (t.isImportSpecifier(spec) && t.isIdentifier(spec.imported) && spec.imported.name === 'signal') {
             // signal import is kept; other framework imports removed
           }
+        }
+      }
+      // Track all imported bindings for signal detection
+      for (const spec of path.node.specifiers) {
+        if (t.isImportSpecifier(spec) && t.isIdentifier(spec.local)) {
+          importedNames.add(spec.local.name);
+        }
+        if (t.isImportDefaultSpecifier(spec) && t.isIdentifier(spec.local)) {
+          importedNames.add(spec.local.name);
+        }
+        if (t.isImportNamespaceSpecifier(spec) && t.isIdentifier(spec.local)) {
+          importedNames.add(spec.local.name);
         }
       }
     },
@@ -610,7 +624,8 @@ function genDomElement(el: t.JSXElement, tagName: string, depth: number): GenRes
           const code = generate(styleExpr).code;
           const sigs = findSignalNames(styleExpr);
           if (sigs.length > 0) {
-            const fullRef = `${currentCompId}.${sigs[0]}`;
+            const sigName = sigs[0];
+            const fullRef = importedNames.has(sigName) ? `module.${sigName}` : `${currentCompId}.${sigName}`;
             lines.push(`${indent(depth)}bindStyle(${ev}, () => ${code}, '${fullRef}');`);
           } else {
             lines.push(`${indent(depth)}bindStyle(${ev}, () => ${code});`);
@@ -837,17 +852,27 @@ function genDynamicAttr(
   const isClass = attrName === 'className' || attrName === 'class';
   const isBool = isBooleanAttr(attrName);
   const sigRef = extractSignalRef(expr);
+  const code = generate(expr).code;
   if (sigRef) {
     importedRuntimeFns.add('bindAttribute');
-    const fullRef = `${currentCompId}.${sigRef}`;
-    lines.push(`${indent(depth)}bindAttribute(${ev}, '${attrName}', () => ${sigRef}.get(), '${fullRef}');`);
-    bindings.push({ nodeId: '', type: 'attribute', attributeName: attrName, signalRef: fullRef });
+    const fullRef = sigRef.startsWith('__module_signal:')
+      ? `module.${sigRef.slice('__module_signal:'.length)}`
+      : `${currentCompId}.${sigRef}`;
+    const getterCode = sigRef.startsWith('__module_signal:')
+      ? code
+      : `${sigRef}.get()`;
+    lines.push(`${indent(depth)}bindAttribute(${ev}, '${attrName}', () => ${getterCode}, '${fullRef}');`);
+    if (!sigRef.startsWith('__module_signal:')) {
+      bindings.push({ nodeId: '', type: 'attribute', attributeName: attrName, signalRef: fullRef });
+    }
   } else {
-    const code = generate(expr).code;
     const sigs = findSignalNames(expr);
     if (sigs.length > 0) {
       importedRuntimeFns.add('bindAttribute');
-      const fullRef = `${currentCompId}.${sigs[0]}`;
+      const sigName = sigs[0];
+      const fullRef = importedNames.has(sigName)
+        ? `module.${sigName}`
+        : `${currentCompId}.${sigName}`;
       lines.push(`${indent(depth)}bindAttribute(${ev}, '${attrName}', () => ${code}, '${fullRef}');`);
     } else {
       if (isClass) {
@@ -891,17 +916,28 @@ function genDynamicText(
   lines.push(`${indent(depth)}${pv}.appendChild(${tv});`);
 
   const sigRef = extractSignalRef(expr);
+  const code = generate(expr).code;
   if (sigRef) {
     importedRuntimeFns.add('bindText');
-    const fullRef = `${currentCompId}.${sigRef}`;
-    lines.push(`${indent(depth)}bindText(${tv}, () => ${sigRef}.get(), '${fullRef}');`);
-    bindings.push({ nodeId: '', type: 'text', signalRef: fullRef });
+    // Imported signals use module-scoped ref path, local signals use component-scoped
+    const fullRef = sigRef.startsWith('__module_signal:')
+      ? `module.${sigRef.slice('__module_signal:'.length)}`
+      : `${currentCompId}.${sigRef}`;
+    const getterCode = sigRef.startsWith('__module_signal:')
+      ? code  // imported signals use the full expression (e.g., theme.get())
+      : `${sigRef}.get()`;  // local signals can use the shortcut
+    lines.push(`${indent(depth)}bindText(${tv}, () => ${getterCode}, '${fullRef}');`);
+    if (!sigRef.startsWith('__module_signal:')) {
+      bindings.push({ nodeId: '', type: 'text', signalRef: fullRef });
+    }
   } else {
-    const code = generate(expr).code;
     const sigs = findSignalNames(expr);
     if (sigs.length > 0) {
       importedRuntimeFns.add('bindText');
-      const fullRef = `${currentCompId}.${sigs[0]}`;
+      const sigName = sigs[0];
+      const fullRef = importedNames.has(sigName)
+        ? `module.${sigName}`
+        : `${currentCompId}.${sigName}`;
       lines.push(`${indent(depth)}bindText(${tv}, () => ${code}, '${fullRef}');`);
     } else {
       lines.push(`${indent(depth)}${tv}.nodeValue = ${code};`);
@@ -1017,6 +1053,12 @@ function genConditionalExpression(
       const result = genJSXFragment(expr.consequent, depth + 1);
       consLines.push(result.code);
       consLines.push(`${indent(depth + 1)}return ${result.var};`);
+    } else if (t.isCallExpression(expr.consequent) && t.isMemberExpression(expr.consequent.callee) && t.isIdentifier(expr.consequent.callee.property) && expr.consequent.callee.property.name === 'map') {
+      // .map() call with JSX in callback — process through genMapExpression
+      const fv = v('mapfrag');
+      consLines.push(`${indent(depth + 1)}const ${fv} = document.createDocumentFragment();`);
+      genMapExpression(fv, expr.consequent as any, depth + 1, consLines);
+      consLines.push(`${indent(depth + 1)}return ${fv};`);
     } else {
       consLines.push(`${indent(depth + 1)}return document.createTextNode(String(${generate(expr.consequent).code}));`);
     }
@@ -1031,6 +1073,11 @@ function genConditionalExpression(
       const result = genJSXFragment(expr.alternate, depth + 1);
       altLines.push(result.code);
       altLines.push(`${indent(depth + 1)}return ${result.var};`);
+    } else if (t.isCallExpression(expr.alternate) && t.isMemberExpression(expr.alternate.callee) && t.isIdentifier(expr.alternate.callee.property) && expr.alternate.callee.property.name === 'map') {
+      const fv = v('mapfrag');
+      altLines.push(`${indent(depth + 1)}const ${fv} = document.createDocumentFragment();`);
+      genMapExpression(fv, expr.alternate as any, depth + 1, altLines);
+      altLines.push(`${indent(depth + 1)}return ${fv};`);
     } else {
       altLines.push(`${indent(depth + 1)}return document.createTextNode(String(${generate(expr.alternate).code}));`);
     }
@@ -1055,6 +1102,11 @@ function genConditionalExpression(
     const result = genJSXFragment(expr.consequent, depth + 1);
     lines.push(result.code);
     lines.push(`${indent(depth + 1)}${cv} = ${result.var};`);
+  } else if (t.isCallExpression(expr.consequent) && t.isMemberExpression(expr.consequent.callee) && t.isIdentifier(expr.consequent.callee.property) && expr.consequent.callee.property.name === 'map') {
+    const fv = v('mapfrag');
+    lines.push(`${indent(depth + 1)}const ${fv} = document.createDocumentFragment();`);
+    genMapExpression(fv, expr.consequent as any, depth + 1, lines);
+    lines.push(`${indent(depth + 1)}${cv} = ${fv};`);
   } else {
     lines.push(`${indent(depth + 1)}${cv} = document.createTextNode(String(${generate(expr.consequent).code}));`);
   }
@@ -1071,6 +1123,11 @@ function genConditionalExpression(
     const result = genJSXFragment(expr.alternate, depth + 1);
     lines.push(result.code);
     lines.push(`${indent(depth + 1)}${cv} = ${result.var};`);
+  } else if (t.isCallExpression(expr.alternate) && t.isMemberExpression(expr.alternate.callee) && t.isIdentifier(expr.alternate.callee.property) && expr.alternate.callee.property.name === 'map') {
+    const fv = v('mapfrag');
+    lines.push(`${indent(depth + 1)}const ${fv} = document.createDocumentFragment();`);
+    genMapExpression(fv, expr.alternate as any, depth + 1, lines);
+    lines.push(`${indent(depth + 1)}${cv} = ${fv};`);
   } else {
     lines.push(`${indent(depth + 1)}${cv} = document.createTextNode(String(${generate(expr.alternate).code}));`);
   }
@@ -1086,8 +1143,9 @@ function genLogicalExpression(
 ): boolean {
   const op = expr.operator;
   const hasJSXRight = t.isJSXElement(expr.right) || t.isJSXFragment(expr.right);
+  const hasMapRight = t.isCallExpression(expr.right) && t.isMemberExpression(expr.right.callee) && t.isIdentifier(expr.right.callee.property) && expr.right.callee.property.name === 'map';
 
-  if (!hasJSXRight) return false;
+  if (!hasJSXRight && !hasMapRight) return false;
 
   const testVar = v('ltest');
   const cv = v('lcond');
@@ -1107,6 +1165,13 @@ function genLogicalExpression(
       } else if (t.isJSXFragment(expr.right)) {
         const result = genJSXFragment(expr.right, depth + 1);
         thunkBody = `${result.code}\n${indent(depth + 1)}return ${result.var};`;
+      } else if (hasMapRight) {
+        const fv = v('mapfrag');
+        const mapLines: string[] = [];
+        mapLines.push(`${indent(depth + 1)}const ${fv} = document.createDocumentFragment();`);
+        genMapExpression(fv, expr.right as any, depth + 1, mapLines);
+        mapLines.push(`${indent(depth + 1)}return ${fv};`);
+        thunkBody = mapLines.join('\n');
       } else {
         thunkBody = `${indent(depth + 1)}return document.createComment('');`;
       }
@@ -1128,6 +1193,11 @@ function genLogicalExpression(
       const result = genJSXFragment(expr.right, depth + 1);
       lines.push(result.code);
       lines.push(`${indent(depth + 1)}${cv} = ${result.var};`);
+    } else if (hasMapRight) {
+      const fv = v('mapfrag');
+      lines.push(`${indent(depth + 1)}const ${fv} = document.createDocumentFragment();`);
+      genMapExpression(fv, expr.right as any, depth + 1, lines);
+      lines.push(`${indent(depth + 1)}${cv} = ${fv};`);
     }
     lines.push(`${indent(depth)}} else {`);
     lines.push(`${indent(depth + 1)}${cv} = document.createComment('');`);
@@ -1147,6 +1217,13 @@ function genLogicalExpression(
       } else if (t.isJSXFragment(expr.right)) {
         const result = genJSXFragment(expr.right, depth + 1);
         elseBody = `${result.code}\n${indent(depth + 1)}return ${result.var};`;
+      } else if (hasMapRight) {
+        const fv = v('mapfrag');
+        const mapLines: string[] = [];
+        mapLines.push(`${indent(depth + 1)}const ${fv} = document.createDocumentFragment();`);
+        genMapExpression(fv, expr.right as any, depth + 1, mapLines);
+        mapLines.push(`${indent(depth + 1)}return ${fv};`);
+        elseBody = mapLines.join('\n');
       } else {
         elseBody = `${indent(depth + 1)}return document.createComment('');`;
       }
@@ -1267,6 +1344,7 @@ function genEventHandler(
 }
 
 function extractSignalRef(expr: t.Expression): string | null {
+  // Local signals (created via signal() inside the component)
   if (t.isIdentifier(expr) && signalVars.has(expr.name)) {
     return expr.name;
   }
@@ -1275,10 +1353,18 @@ function extractSignalRef(expr: t.Expression): string | null {
     t.isMemberExpression(expr.callee) &&
     t.isIdentifier(expr.callee.object) &&
     t.isIdentifier(expr.callee.property) &&
-    expr.callee.property.name === 'get' &&
-    signalVars.has(expr.callee.object.name)
+    expr.callee.property.name === 'get'
   ) {
-    return expr.callee.object.name;
+    const objName = expr.callee.object.name;
+    if (signalVars.has(objName)) {
+      return objName;
+    }
+    // Imported signals — use a distinct ref path so bootstrap can identify them
+    if (importedNames.has(objName)) {
+      return `__module_signal:${objName}`;
+    }
+    // Unknown .get() call — still treat as potentially reactive
+    return objName;
   }
   return null;
 }
@@ -1374,9 +1460,21 @@ function findSignalNames(expr: t.Expression): string[] {
   const seen = new Set<string>();
 
   function walk(node: t.Node): void {
-    if (t.isIdentifier(node) && signalVars.has(node.name) && !seen.has(node.name)) {
-      seen.add(node.name);
-      found.push(node.name);
+    if (t.isIdentifier(node)) {
+      if (signalVars.has(node.name) && !seen.has(node.name)) {
+        seen.add(node.name);
+        found.push(node.name);
+        return;
+      }
+      // Check if this identifier is used in a .get() call — implies it's a signal
+      // We detect this by looking at parent nodes in the walk, but since we don't
+      // have parent references, we check if the identifier has .get() call context.
+      // For now, add imported identifiers as potential signals.
+      if (importedNames.has(node.name) && !seen.has(node.name)) {
+        seen.add(node.name);
+        found.push(node.name);
+        return;
+      }
     }
     for (const key of t.VISITOR_KEYS[node.type] || []) {
       const val = (node as any)[key];

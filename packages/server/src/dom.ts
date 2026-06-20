@@ -62,10 +62,44 @@ export class ServerElement {
   _noopNodeId: string | null = null;
   _isFragment: boolean = false;
   className: string = '';
-  innerHTML: string = '';
+  private _innerHTMLValue: string = '';
+  _textContent: string = '';
+  _textNode: ServerTextNode | null = null;
+
+  get innerHTML(): string {
+    return this._innerHTMLValue || '';
+  }
+
+  set innerHTML(val: string) {
+    this._textContent = '';
+    this._textNode = null;
+    this.children = [];
+    this._innerHTMLValue = val;
+  }
   _sentinelId: number = -1;
   _sentinelActive: boolean = false;
   _sentinelHost: SentinelHost | null = null;
+
+  get textContent(): string {
+    if (this._textNode) return this._textNode._value;
+    if (this.children.length === 0) return '';
+    // Collect text from all text node children
+    let text = '';
+    for (const child of this.children) {
+      if (child instanceof ServerTextNode) text += child._value;
+    }
+    return text;
+  }
+
+  set textContent(val: string) {
+    this._textContent = val;
+    this._innerHTMLValue = '';
+    // Clear existing children and replace with a single text node
+    this.children = [];
+    this._textNode = new ServerTextNode(val);
+    this._textNode.parentNode = this;
+    this.children.push(this._textNode);
+  }
 
   get childNodes(): (ServerElement | ServerTextNode)[] {
     return this.children;
@@ -96,12 +130,14 @@ export class ServerElement {
     this.attributes.delete(name);
   }
 
-  appendChild(child: ServerElement | ServerTextNode | ServerComment): void {
+  appendChild(child: ServerElement | ServerTextNode | ServerComment | null | undefined): void {
+    if (child == null) return;
     child.parentNode = this;
     this.children.push(child);
   }
 
-  insertBefore(child: ServerElement | ServerTextNode | ServerComment, ref: ServerElement | ServerTextNode | ServerComment | null): void {
+  insertBefore(child: ServerElement | ServerTextNode | ServerComment | null | undefined, ref: ServerElement | ServerTextNode | ServerComment | null): void {
+    if (child == null) return;
     if (!ref) {
       this.appendChild(child);
       return;
@@ -113,7 +149,8 @@ export class ServerElement {
     }
   }
 
-  replaceChild(newChild: ServerElement | ServerTextNode | ServerComment, oldChild: ServerElement | ServerTextNode | ServerComment): void {
+  replaceChild(newChild: ServerElement | ServerTextNode | ServerComment | null | undefined, oldChild: ServerElement | ServerTextNode | ServerComment): void {
+    if (newChild == null) return;
     const idx = this.children.indexOf(oldChild);
     if (idx >= 0) {
       oldChild.parentNode = null;
@@ -168,7 +205,8 @@ export class ServerElement {
   }
 
   private _innerHTML(): string {
-    if (this.innerHTML) return this.innerHTML;
+    if (this._innerHTMLValue) return this._innerHTMLValue;
+    if (this._textContent) return escapeHtml(this._textContent);
 
     // For <select>, set selected on the matching <option> based on the value attribute
     if (this.tagName === 'SELECT' && this.attributes.has('value')) {
