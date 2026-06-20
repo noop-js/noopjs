@@ -280,7 +280,10 @@ async function startDev() {
     plugins: [noopVite({ ssr: true })],
     server: { middlewareMode: true },
     appType: 'custom',
-    ssr: { external: ['@noopjs/runtime', '@noopjs/signals'] },
+    ssr: {
+      external: ['@noopjs/runtime', '@noopjs/signals'],
+      noExternal: ['@noopjs/server'],
+    },
   });
 
   const template = fs.readFileSync(path.resolve(root, 'index.html'), 'utf-8');
