@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vite build"
+    "build": "vite build",
+    "build:ssr": "VITE_SSR_BUILD=1 vite build --ssr src/entry-server.ts --outDir dist/server && cp -r dist/server/assets/. dist/assets/ 2>/dev/null; true",
+    "build:prod": "npm run build && npm run build:ssr",
+    "start": "tsx server-prod.ts"
   },
   "dependencies": {
     "@noopjs/vite": "workspace:*",
@@ -14,6 +17,7 @@
     "@noopjs/runtime": "workspace:*",
     "@noopjs/signals": "workspace:*",
     "@noopjs/compiler": "workspace:*",
+    "@noopjs/devtools": "workspace:*",
     "tailwindcss": "^4.0.0",
     "@tailwindcss/vite": "^4.0.0",
     "vite": "^6.4.0"

@@ -165,6 +165,18 @@ function vlqEncode(values: number[]): string {
           return HANDLER_PREFIX + handlerId;
         }
       }
+
+      // Resolve relative imports from .noop files that the Vite SSR module runner
+      // may fail to resolve (relative paths get passed through without resolution)
+      if (id.startsWith('.') && importer && NOOP_FILE_PATTERN.test(importer)) {
+        const importerDir = importer.substring(0, importer.lastIndexOf('/'));
+        const resolvedPath = path.resolve(importerDir, id);
+        if (fs.existsSync(resolvedPath)) return resolvedPath;
+        if (fs.existsSync(resolvedPath + '.ts')) return resolvedPath + '.ts';
+        if (fs.existsSync(resolvedPath + '.tsx')) return resolvedPath + '.tsx';
+        if (fs.existsSync(resolvedPath + '.js')) return resolvedPath + '.js';
+      }
+
       return null;
     },
 

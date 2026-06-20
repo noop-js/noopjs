@@ -113,6 +113,14 @@ export function enterSSR(ctx: SSRContext): void {
   (globalThis as any).__NOOP_SSR_CONTEXT = ctx;
   originalDocument = (globalThis as any).document;
   (globalThis as any).document = ctx.document;
+  // Define Element/Node globals for runtime code that uses instanceof checks, e.g.
+  // __noopReconcile calls "node instanceof Element" to set data-noop-key.
+  if (typeof globalThis.Element === 'undefined') {
+    (globalThis as any).Element = ServerElement;
+  }
+  if (typeof globalThis.Node === 'undefined') {
+    (globalThis as any).Node = class Node {};
+  }
 }
 
 export function exitSSR(): void {

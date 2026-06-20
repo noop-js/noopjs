@@ -588,7 +588,7 @@ function genDomElement(el: t.JSXElement, tagName: string, depth: number): GenRes
       } else if (attrName === 'dangerouslySetInnerHTML' && attr.value && t.isJSXExpressionContainer(attr.value)) {
         // dangerouslySetInnerHTML={{ __html: '<b>raw</b>' }}
         // We generate: el.innerHTML = <expr>.__html
-        lines.push(`${indent(depth)}${ev}.innerHTML = ${generate(attr.value.expression)}.__html;`);
+        lines.push(`${indent(depth)}${ev}.innerHTML = ${generate(attr.value.expression).code}.__html;`);
       } else if (attrName === 'style' && attr.value && t.isJSXExpressionContainer(attr.value)) {
         if (t.isObjectExpression(attr.value.expression) && isFullyStaticObject(attr.value.expression)) {
           // Static style object → try token resolution, then fall back to NoopCSS

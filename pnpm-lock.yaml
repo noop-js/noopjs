@@ -146,6 +146,9 @@ importers:
       '@noopjs/compiler':
         specifier: workspace:*
         version: link:../../packages/compiler
+      '@noopjs/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@noopjs/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
