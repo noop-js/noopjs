@@ -93,7 +93,9 @@ describe('compiler', () => {
       }
     `;
     const result = compile(source);
-    expect(result.code).not.toContain('@noopjs/signals');
+    // @noopjs/signals import is preserved so the runtime can access signal()
+    // at module level (e.g. in .ts files loaded alongside the component)
+    expect(result.code).toContain('@noopjs/signals');
     expect(result.code).toContain('./other');
   });
 

@@ -184,6 +184,19 @@ Hydration runs a component on the client and diffs its output against server HTM
 
 Per-page JavaScript payloads: **0 KB** for `client: none`, **466 B** gzipped for `client: resume` (polyfill + signals + bindings + inline handlers), **317 B** inline + **3.5 KB** cached shared runtime for `client: spa`.
 
+### Client Capability Levels
+
+A `// client:` directive at the top of a `.noop.tsx` file selects how much JS ships to the browser:
+
+| Level | JS Payload | When to Use | Limits |
+|-------|-----------|-------------|--------|
+| `none` | 0 KB | Static content (about, 404, docs) | No interactivity at all |
+| `resume` | ~500 B inline | Forms with validation, toggle buttons, counters | Fixed DOM structure only. Signals and handlers are re-bound without re-running the component. **Cannot create or remove DOM nodes dynamically.** Use only when the HTML structure is known at SSR time. |
+| `spa` | ~550 B + 3.5 KB cached shared runtime | Dynamic lists, search results, async data, comment threads | Ships a shared router. The component function re-runs on signal changes, so dynamic content (`.map()`, conditionals) updates correctly. |
+| `full` | same as spa | Everything | Currently the same as `spa`. Reserved for future use with fully client-rendered pages. |
+
+**Key guidance:** If your page has content that changes based on user interaction (search results, filtered lists, toggled sections), use `client: spa`. The `resume` level is best for forms, toggles, and counters where the DOM structure is fixed and only values change.
+
 ```
          SSR                               Client
   ┌─────────────────┐              ┌──────────────────┐

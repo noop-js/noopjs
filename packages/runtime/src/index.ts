@@ -331,6 +331,7 @@ export function bindEvent(
   eventType: string,
   handler: (...args: any[]) => void,
   handlerId: string,
+  handlerSource?: string,
 ): void {
   if (isSSR()) {
     el.setAttribute('data-noop-ev', handlerId);
@@ -342,7 +343,11 @@ export function bindEvent(
         handlerIndex: (ctx.handlerIndexCounter = (ctx.handlerIndexCounter || 0) + 1),
       };
       // Store handler source code for inline bootstrap emission
-      if (typeof handler === 'function') {
+      // Use compiler-provided source (pre-Vite-transform) to avoid Vite SSR import aliases
+      if (handlerSource) {
+        if (!ctx.handlerSources) ctx.handlerSources = {};
+        ctx.handlerSources[handlerId] = handlerSource;
+      } else if (typeof handler === 'function') {
         let src = handler.toString();
         // Strip TypeScript type annotations — the function source may retain
         // types if it went through @babel/generator without a TS transform

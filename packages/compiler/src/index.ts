@@ -135,6 +135,20 @@ export function compile(source: string, options: CompileOptions = {}): CompileRe
         }
       }
     },
+    // Detect module-level signal() calls and emit a clear error
+    CallExpression(path) {
+      if (t.isIdentifier(path.node.callee) && path.node.callee.name === 'signal') {
+        // Check if this signal() call is at module level (not inside a function)
+        let scope = path.findParent(p => t.isFunctionDeclaration(p.node) || t.isFunctionExpression(p.node) || t.isArrowFunctionExpression(p.node));
+        if (!scope) {
+          throw new Error(
+            `Module-level signal() declaration is not supported. ` +
+            `Move signal() calls inside a component function, or define them in a separate .ts file. ` +
+            `See examples/hackernews/src/theme.ts for the recommended pattern.`
+          );
+        }
+      }
+    },
     VariableDeclarator(path) {
       if (
         t.isIdentifier(path.node.id) &&
@@ -1247,7 +1261,8 @@ function genEventHandler(
     lines.push(`${indent(depth)}const ${hid} = (e) => { import('./__noop_handler__${hid}.js').then(m => m.default(e)); };`);
     lines.push(`${indent(depth)}bindEvent(${ev}, '${eventType}', ${hid}, '${hid}');`);
   } else {
-    lines.push(`${indent(depth)}bindEvent(${ev}, '${eventType}', ${cleanedCode}, '${hid}');`);
+    // Pass the original handler source as 5th arg to avoid Vite SSR transform corruption
+    lines.push(`${indent(depth)}bindEvent(${ev}, '${eventType}', ${cleanedCode}, '${hid}', ${JSON.stringify(cleanedCode)});`);
   }
 }
 
