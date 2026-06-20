@@ -242,23 +242,103 @@ export default function App(props, __noopId) {
     console.log('Created index.html');
   }
 
+  // Install dependencies
+  console.log('\nInstalling dependencies...');
+  const { execSync } = await import('child_process');
+  try {
+    execSync('npm install', { cwd: root, stdio: 'inherit' });
+    console.log('Dependencies installed.');
+  } catch {
+    console.log('Run "npm install" manually to install dependencies.');
+  }
+
   console.log('\nProject initialized! Run: noopjs dev');
 }
 
 async function startDev() {
   const root = process.cwd();
+  const fs = await import('fs');
+  const path = await import('path');
 
-  const server = await createServer({
+  const hasEntryServer = fs.existsSync(path.resolve(root, 'src/entry-server.ts'));
+
+  if (!hasEntryServer) {
+    // Fall back to plain Vite dev server
+    const server = await createServer({
+      root,
+      plugins: [noopVite()],
+      server: { port: 3000, open: false },
+    });
+    await server.listen();
+    server.printUrls();
+    return;
+  }
+
+  // SSR dev server (matches blog/counter example pattern)
+  const vite = await createServer({
     root,
-    plugins: [noopVite()],
-    server: {
-      port: 3000,
-      open: true,
-    },
+    plugins: [noopVite({ ssr: true })],
+    server: { middlewareMode: true },
+    appType: 'custom',
+    ssr: { external: ['@noopjs/runtime', '@noopjs/signals'] },
   });
 
-  await server.listen();
-  server.printUrls();
+  const template = fs.readFileSync(path.resolve(root, 'index.html'), 'utf-8');
+
+  const { generatePageBootstrap, extractPrefetchLinks } = await import('@noopjs/server');
+
+  const http = await import('http');
+  const server = http.createServer(async (req, res) => {
+    const url = new URL(req.url || '/', `http://${req.headers.host}`);
+    const pathname = url.pathname;
+
+    vite.middlewares.handle(req, res, async () => {
+      try {
+        const mod = await vite.ssrLoadModule('/src/entry-server.ts');
+        const renderFn = mod.render || mod.default;
+        if (typeof renderFn !== 'function') {
+          res.writeHead(500, { 'Content-Type': 'text/plain' });
+          res.end('entry-server.ts must export a render function');
+          return;
+        }
+        const routeName = pathname === '/' ? 'index' : pathname.replace(/^\//, '');
+        const result = await renderFn(routeName);
+
+        const clientLevel: string = result.clientLevel || 'spa';
+        const safeJson = JSON.stringify(result.state)
+          .replace(/</g, '\\u003C')
+          .replace(/>/g, '\\u003E')
+          .replace(/-->/g, '--\\>');
+        const stateScript = clientLevel !== 'none'
+          ? `<script id="__NOOP_STATE__" type="application/json">${safeJson}</script>`
+          : '';
+        const bootstrap = generatePageBootstrap(result.state, clientLevel as any);
+        const clientScript = (clientLevel === 'spa' || clientLevel === 'full')
+          ? '<script type="module" src="/src/main.ts"></script>' : '';
+        const prefetchLinks = extractPrefetchLinks(result.html)
+          .map((href: string) => `<link rel="prefetch" href="${href}">`)
+          .join('\n    ');
+
+        const html = template
+          .replace('<!--ssr-content-->', result.html)
+          .replace('</head>', prefetchLinks ? `  ${prefetchLinks}\n  </head>` : '</head>')
+          .replace('<!--client-script-->', clientScript)
+          .replace('</body>', stateScript + '\n' + bootstrap + '\n</body>');
+
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(html);
+      } catch (err: any) {
+        console.error('SSR error:', err);
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end(err?.message || String(err));
+      }
+    });
+  });
+
+  const PORT = parseInt(process.env.PORT || '3000', 10);
+  server.listen(PORT, () => {
+    console.log('Noop Dev Server at http://localhost:' + PORT);
+  });
 }
 
 async function runBuild() {
@@ -284,6 +364,7 @@ async function runBuild() {
     }
   } catch (e: any) {
     console.error('[Noop] SSR build failed:', e?.message || e);
+    if (e?.stack) console.error(e.stack);
   }
 
   console.log('Build complete. Output in ./dist');

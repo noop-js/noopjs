@@ -143,6 +143,13 @@ export class ServerElement {
       return `<${tag}${this._attrs()}>`;
     }
 
+    // Handle <textarea> value: emit as child text, not attribute
+    if (tag === 'textarea' && this.attributes.has('value')) {
+      const val = this.attributes.get('value')!;
+      this.attributes.delete('value');
+      this.children.push(new ServerTextNode(val));
+    }
+
     return `<${tag}${this._attrs()}>${this._innerHTML()}</${tag}>`;
   }
 

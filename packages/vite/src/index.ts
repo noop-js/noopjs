@@ -273,8 +273,11 @@ function vlqEncode(values: number[]): string {
 
     handleHotUpdate(ctx) {
       if (NOOP_FILE_PATTERN.test(ctx.file)) {
-        // Force full re-load and re-transform
-        return ctx.modules;
+        // Return only the changed module (not all affected modules) so Vite
+        // performs a hot swap via the module's own import.meta.hot.accept()
+        // handler, avoiding a full page reload.
+        const mod = ctx.server.moduleGraph.getModuleById(ctx.file);
+        return mod ? [mod] : undefined;
       }
       return undefined;
     },

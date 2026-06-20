@@ -31,6 +31,7 @@
   },
   "dependencies": {
     "@noopjs/compiler": "workspace:*",
+    "@noopjs/server": "workspace:*",
     "@noopjs/vite": "workspace:*",
     "vite": "^6.0.0"
   },

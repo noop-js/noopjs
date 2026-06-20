@@ -343,7 +343,14 @@ export function bindEvent(
       };
       // Store handler source code for inline bootstrap emission
       if (typeof handler === 'function') {
-        const src = handler.toString();
+        let src = handler.toString();
+        // Strip TypeScript type annotations — the function source may retain
+        // types if it went through @babel/generator without a TS transform
+        src = src.replace(/\s+as\s+\w+(?:\.\w+)?(?:<[^>]*>)?/g, '');
+        src = src.replace(/\(\s*(\w+)\s*:\s*\w+(?:<[^>]*>)?\s*(?:,\s*([^)]+))?\s*\)/g, (_, p1, rest) => {
+          if (rest) return `(${p1}, ${rest})`;
+          return `(${p1})`;
+        });
         if (!ctx.handlerSources) ctx.handlerSources = {};
         ctx.handlerSources[handlerId] = src;
       }

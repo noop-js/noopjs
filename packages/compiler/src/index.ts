@@ -173,6 +173,44 @@ export function compile(source: string, options: CompileOptions = {}): CompileRe
   let body: t.BlockStatement | null = null;
   let isAsync = false;
 
+  // Collect non-default function declarations (helper components)
+  const helperFns: string[] = [];
+
+  traverse(ast, {
+    ExportNamedDeclaration(path) {
+      const decl = path.node.declaration;
+      if (t.isFunctionDeclaration(decl) && decl.id) {
+        const fnName = decl.id.name;
+        if (fnName !== compName) {
+          // Strip TypeScript annotations from params and return type
+          const params = decl.params.map(p => {
+            if (t.isIdentifier(p)) return p.name;
+            if (t.isAssignmentPattern(p) && t.isIdentifier(p.left)) return `${p.left.name} = ${generate(p.right).code}`;
+            return generate(p).code;
+          }).join(', ');
+          const bodyCode = decl.body ? generate(decl.body).code : '{}';
+          const asyncPrefix = decl.async ? 'async ' : '';
+          helperFns.push(`export ${asyncPrefix}function ${fnName}(${params}) ${bodyCode}`);
+        }
+      }
+    },
+    FunctionDeclaration(path) {
+      // Module-level function declarations (helper components)
+      if (!path.node.id || path.getFunctionParent()) return;
+      const fnName = path.node.id.name;
+      if (fnName !== compName) {
+        const params = path.node.params.map(p => {
+          if (t.isIdentifier(p)) return p.name;
+          if (t.isAssignmentPattern(p) && t.isIdentifier(p.left)) return `${p.left.name} = ${generate(p.right).code}`;
+          return generate(p).code;
+        }).join(', ');
+        const bodyCode = path.node.body ? generate(path.node.body).code : '{}';
+        const asyncPrefix = path.node.async ? 'async ' : '';
+        helperFns.push(`${asyncPrefix}function ${fnName}(${params}) ${bodyCode}`);
+      }
+    },
+  });
+
   traverse(ast, {
     ExportDefaultDeclaration(path) {
       const decl = path.node.declaration;
@@ -226,6 +264,12 @@ export function compile(source: string, options: CompileOptions = {}): CompileRe
   }
 
   out.push('');
+
+  // Emit helper functions (non-default function declarations)
+  if (helperFns.length > 0) {
+    for (const hf of helperFns) out.push(hf);
+    out.push('');
+  }
 
   // Generate the component function
   const funcHead = isAsync ? 'async ' : '';
@@ -1133,6 +1177,19 @@ function genLogicalExpression(
   return false;
 }
 
+function stripTypeAnnotations(code: string): string {
+  return code
+    // Remove 'as Type' casts: (e.target as HTMLInputElement) → e.target
+    .replace(/\s+as\s+\w+(?:\.\w+)?(?:<[^>]*>)?/g, '')
+    // Remove parameter type annotations: (e: Event) → (e)
+    .replace(/\(\s*(\w+)\s*:\s*\w+(?:<[^>]*>)?\s*(?:,\s*([^)]+))?\s*\)/g, (_, p1, rest) => {
+      if (rest) return `(${p1}, ${rest})`;
+      return `(${p1})`;
+    })
+    // Remove function return types: function(): void { → function() {
+    .replace(/\)\s*:\s*\w+(?:<[^>]*>)?(?:\s*\[\])?\s*([={])/g, ')$1');
+}
+
 function genEventHandler(
   ev: string, eventType: string, expr: t.Expression, depth: number, lines: string[],
 ): void {
@@ -1140,11 +1197,13 @@ function genEventHandler(
   const handlerCode = generate(expr).code;
   importedRuntimeFns.add('bindEvent');
 
+  const cleanedCode = stripTypeAnnotations(handlerCode);
+
   if (extractHandlersMode) {
     handlers.push({
       id: hid,
       eventType,
-      code: handlerCode,
+      code: cleanedCode,
       extracted: true,
     });
     // Generate dynamic import for the handler chunk
@@ -1152,7 +1211,7 @@ function genEventHandler(
     lines.push(`${indent(depth)}const ${hid} = (e) => { import('./__noop_handler__${hid}.js').then(m => m.default(e)); };`);
     lines.push(`${indent(depth)}bindEvent(${ev}, '${eventType}', ${hid}, '${hid}');`);
   } else {
-    lines.push(`${indent(depth)}bindEvent(${ev}, '${eventType}', ${handlerCode}, '${hid}');`);
+    lines.push(`${indent(depth)}bindEvent(${ev}, '${eventType}', ${cleanedCode}, '${hid}');`);
   }
 }
 
