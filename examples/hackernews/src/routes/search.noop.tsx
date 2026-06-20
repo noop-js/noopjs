@@ -55,6 +55,7 @@ export default function SearchPage() {
         <Form onSubmit={doSearch}>
           <input
             {...query.props}
+            onInput={function(e: Event) { query.value.set((e.target as HTMLInputElement).value); }}
             placeholder="Search Hacker News..."
             style="width:100%;max-width:600px;padding:8px;font-size:14px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text)"
           />

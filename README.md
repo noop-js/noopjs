@@ -206,7 +206,13 @@ export default function SearchPage() {
   return (
     <div>
       <Form onSubmit={doSearch}>
-        <input {...query.props} placeholder="Search..." />
+        <input
+          {...query.props}
+          onInput={function(e: Event) {
+            query.value.set((e.target as HTMLInputElement).value);
+          }}
+          placeholder="Search..."
+        />
         {query.error.get() && <span>{query.error.get()}</span>}
         <button>Search</button>
       </Form>
@@ -220,10 +226,12 @@ export default function SearchPage() {
 |---|---|
 | `value` | `Signal<string>` — read with `field.value.get()` |
 | `error` | `Signal<string \| null>` — validation error, set by `field.validate()` |
-| `props` | `{ value, onInput }` — spread onto `<input>`, `<textarea>`, `<select>` |
+| `props` | `{ value }` — spread onto `<input>`, `<textarea>`, `<select>` |
 | `set(v)` | Programmatically set the value |
 | `validate()` | Run the validation function, set `error` signal, return error or null |
 | `reset()` | Restore initial value and clear error |
+
+`onInput` is defined inline on the `<input>` element, not inside `props`. The compiler detects `onInput={...}` and binds it via event delegation.
 
 `<Form>` creates a `<form>` element with `preventDefault` on submit. Works in `client: spa` pages.
 

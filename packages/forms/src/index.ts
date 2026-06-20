@@ -7,7 +7,7 @@ export interface UseFieldOptions {
 export interface UseFieldReturn {
   value: Signal<string>;
   error: Signal<string | null>;
-  props: { value: string; onInput: (e: Event) => void };
+  props: { value: string };
   set: (v: string) => void;
   validate: () => string | null;
   reset: () => void;
@@ -26,17 +26,14 @@ export function useField(initialValue: string = '', options?: UseFieldOptions): 
     return null;
   }
 
+  const props = {
+    get value() { return value.get(); },
+  };
+
   return {
     value,
     error,
-    props: {
-      get value() { return value.get(); },
-      onInput(e: Event) {
-        const target = e.target as HTMLInputElement;
-        value.set(target.value);
-        if (error.get() !== null) validateField();
-      },
-    },
+    props,
     set: (v: string) => { value.set(v); },
     validate: validateField,
     reset: () => { value.set(initialValue); error.set(null); },
