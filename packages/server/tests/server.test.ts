@@ -37,12 +37,13 @@ describe('renderToString', () => {
 
 describe('renderToStream', () => {
   it('returns a ReadableStream', () => {
-    const stream = renderToStream(Counter);
-    expect(stream).toBeInstanceOf(ReadableStream);
+    const result = renderToStream(Counter);
+    expect(result.stream).toBeInstanceOf(ReadableStream);
+    expect(result.state).toBeInstanceOf(Promise);
   });
 
   it('produces HTML chunks', async () => {
-    const stream = renderToStream(Counter);
+    const { stream, state } = renderToStream(Counter);
     const reader = stream.getReader();
     const chunks: Uint8Array[] = [];
 
@@ -53,14 +54,17 @@ describe('renderToStream', () => {
     }
 
     const full = chunks.map(c => new TextDecoder().decode(c)).join('');
-    expect(full).toContain('<!DOCTYPE html>');
     expect(full).toContain('<button');
     expect(full).toContain('count: 0');
-    expect(full).toContain('__NOOP_STATE__');
+    expect(full).not.toContain('__NOOP_STATE__'); // state is returned via promise, not in stream
+
+    const streamState = await state;
+    expect(streamState.signals).toBeDefined();
+    expect(streamState.signals['c0.count']).toBe(0);
   });
 
-  it('includes serialized state in streamed output', async () => {
-    const stream = renderToStream(Counter);
+  it('returns state via promise matching rendered content', async () => {
+    const { stream, state } = renderToStream(Counter);
     const reader = stream.getReader();
     let full = '';
 
@@ -70,7 +74,9 @@ describe('renderToStream', () => {
       full += new TextDecoder().decode(value);
     }
 
-    expect(full).toContain('"c0.count"');
+    const streamState = await state;
+    expect(full).toContain('count: 0');
+    expect(streamState.signals['c0.count']).toBe(0);
   });
 });
 

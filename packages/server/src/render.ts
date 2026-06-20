@@ -83,31 +83,48 @@ export async function renderToString(
   }
 }
 
+/**
+ * Render component to a ReadableStream that emits content only (what goes
+ * inside <div id="root">). Does not emit the HTML shell or state scripts —
+ * the caller is responsible for that, enabling shell-first streaming:
+ *
+ *   res.write(shell);
+ *   const stream = renderToStream(componentFn, props);
+ *   await stream.pipeTo(new WritableStream({ write(chunk) { res.write(chunk); } }));
+ *   res.write(footer);
+ *
+ * Returns the stream AND a promise that resolves with the serialized state
+ * after the stream completes.
+ */
 export function renderToStream(
   componentFn: (...args: any[]) => any,
   props: Record<string, any> = {},
-): ReadableStream<Uint8Array> {
+  options?: { clientLevel?: ClientLevel },
+): { stream: ReadableStream<Uint8Array>; state: Promise<SerializedState> } {
   const encoder = new TextEncoder();
+  const clientLevel: ClientLevel = options?.clientLevel || (componentFn as any).clientLevel || 'spa';
 
-  return new ReadableStream({
+  let resolveState: (state: SerializedState) => void;
+  const statePromise = new Promise<SerializedState>(resolve => { resolveState = resolve; });
+
+  const stream = new ReadableStream({
     async start(controller) {
       const componentId = 'c0';
       const ctx = createSSRContext(componentId);
       enterSSR(ctx);
 
-      try {
-        const doc = ctx.document;
-        controller.enqueue(encoder.encode('<!DOCTYPE html>\n<html>'));
-        const headHtml = doc.documentElement.children[0]?.toHTML() || '<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>';
-        controller.enqueue(encoder.encode(headHtml));
-        controller.enqueue(encoder.encode('<body><div id="root">'));
+      const writer: import('./dom.js').StreamWriter = {
+        write(chunk) { controller.enqueue(encoder.encode(chunk)); },
+        flush() { /* ReadableStream controller enqueues immediately */ },
+      };
 
+      try {
         let rootNode: any;
         try {
           rootNode = componentFn(props, componentId);
         } catch (e) {
-          controller.enqueue(encoder.encode(errorFallbackHtml(e)));
-          controller.enqueue(encoder.encode('</div></body></html>'));
+          writer.write(errorFallbackHtml(e));
+          resolveState({ signals: {}, bindings: [], handlers: {}, rootId: componentId, clientLevel });
           controller.close();
           return;
         }
@@ -116,13 +133,14 @@ export function renderToStream(
           try {
             rootNode = await rootNode;
           } catch {
-            controller.enqueue(encoder.encode('</div></body></html>'));
+            resolveState({ signals: {}, bindings: [], handlers: {}, rootId: componentId, clientLevel });
             controller.close();
             return;
           }
         }
 
         if (rootNode != null) {
+          const doc = ctx.document;
           const container = doc.createElement('div');
           container.appendChild(rootNode);
 
@@ -136,27 +154,22 @@ export function renderToStream(
             } catch {}
           }
 
-          let content = container.toHTML();
-          controller.enqueue(encoder.encode(content));
-
-          controller.enqueue(encoder.encode('</div>'));
-          controller.enqueue(encoder.encode(stateToScript({ ...getSerializedState(), clientLevel: 'spa' as ClientLevel })));
-          controller.enqueue(encoder.encode('</body></html>'));
-          controller.close();
-        } else {
-          controller.enqueue(encoder.encode('</div></body></html>'));
-          controller.close();
+          container.serialize(writer);
         }
+
+        resolveState({ ...getSerializedState(), clientLevel });
+        controller.close();
       } catch (err) {
-        controller.enqueue(encoder.encode('</div>'));
-        controller.enqueue(encoder.encode(stateToScript({ signals: {}, bindings: [], handlers: {}, rootId: 'c0' })));
-        controller.enqueue(encoder.encode('</body></html>'));
+        writer.write(errorFallbackHtml(err));
+        resolveState({ signals: {}, bindings: [], handlers: {}, rootId: 'c0', clientLevel });
         controller.close();
       } finally {
         exitSSR();
       }
     },
   });
+
+  return { stream, state: statePromise };
 }
 
 function stateToScript(state: SerializedState): string {

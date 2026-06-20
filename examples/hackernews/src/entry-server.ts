@@ -6,57 +6,70 @@ import AboutPage from './routes/about.noop';
 import SearchPage from './routes/search.noop';
 import NotFoundPage from './routes/not-found.noop';
 
-interface PageEntry {
+export interface PageEntry {
   component: (...args: any[]) => any;
+  props: Record<string, any>;
   clientLevel: ClientLevel;
   pageTitle?: string;
 }
 
-function createComponent(fn: (...args: any[]) => any, clientLevel: ClientLevel, pageTitle?: string): PageEntry {
-  return { component: fn, clientLevel, pageTitle };
-}
-
-export async function render(routeName: string, params: Record<string, string>) {
-  let entry: PageEntry;
-
+export async function render(routeName: string, params: Record<string, string>): Promise<PageEntry> {
   switch (routeName) {
     case 'index': {
       const data = await fetchTopStories(0);
-      entry = createComponent(() => IndexPage({ stories: data.hits, page: data.page, nbPages: data.nbPages }), (IndexPage as any).clientLevel || 'spa', 'HN Noop');
-      break;
+      return {
+        component: () => IndexPage({ stories: data.hits, page: data.page, nbPages: data.nbPages }),
+        props: {},
+        clientLevel: (IndexPage as any).clientLevel || 'spa',
+        pageTitle: 'HN Noop',
+      };
     }
     case 'item': {
       if (!params.id) throw new Error('Missing id param');
       const item = await fetchStory(params.id);
       const itemMod = await import('./routes/item.noop');
-      entry = createComponent(() => itemMod.default({ item }), (itemMod.default as any).clientLevel || 'spa', `${item.title} — HN Noop`);
-      break;
+      return {
+        component: () => itemMod.default({ item }),
+        props: {},
+        clientLevel: (itemMod.default as any).clientLevel || 'spa',
+        pageTitle: `${item.title} — HN Noop`,
+      };
     }
     case 'user': {
       if (!params.username) throw new Error('Missing username param');
       const user = await fetchUser(params.username);
       const userMod = await import('./routes/user.noop');
-      entry = createComponent(() => userMod.default({ user }), (userMod.default as any).clientLevel || 'resume', `${user.id} — HN Noop`);
-      break;
+      return {
+        component: () => userMod.default({ user }),
+        props: {},
+        clientLevel: (userMod.default as any).clientLevel || 'resume',
+        pageTitle: `${user.id} — HN Noop`,
+      };
     }
     case 'search': {
       const searchMod = await import('./routes/search.noop');
-      entry = createComponent(() => searchMod.default({}), (searchMod.default as any).clientLevel || 'resume', 'Search — HN Noop');
-      break;
+      return {
+        component: () => searchMod.default({}),
+        props: {},
+        clientLevel: (searchMod.default as any).clientLevel || 'resume',
+        pageTitle: 'Search — HN Noop',
+      };
     }
     case 'about':
-      entry = createComponent(() => AboutPage(), (AboutPage as any).clientLevel || 'none', 'About — HN Noop');
-      break;
+      return {
+        component: () => AboutPage(),
+        props: {},
+        clientLevel: (AboutPage as any).clientLevel || 'none',
+        pageTitle: 'About — HN Noop',
+      };
     case 'not-found':
-      entry = createComponent(() => NotFoundPage(), (NotFoundPage as any).clientLevel || 'none', '404 — HN Noop');
-      break;
+      return {
+        component: () => NotFoundPage(),
+        props: {},
+        clientLevel: (NotFoundPage as any).clientLevel || 'none',
+        pageTitle: '404 — HN Noop',
+      };
     default:
       throw new Error(`Unknown route: ${routeName}`);
   }
-
-  const result = await renderToString(entry.component, {}, { clientLevel: entry.clientLevel });
-  return {
-    ...result,
-    state: { ...result.state, pageTitle: entry.pageTitle },
-  };
 }

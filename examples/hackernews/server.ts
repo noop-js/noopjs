@@ -1,6 +1,6 @@
 import { createServer } from 'vite';
 import { noopVite } from '@noopjs/vite';
-import { extractPrefetchLinks, generatePageBootstrap, type ClientLevel } from '@noopjs/server';
+import { renderToStream, generatePageBootstrap, type ClientLevel } from '@noopjs/server';
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -56,40 +56,61 @@ async function start() {
         }
 
         const { render } = await vite.ssrLoadModule('/src/entry-server.ts');
-        const result = await render(routeName, params);
-        const clientLevel: ClientLevel = result.clientLevel;
-        const stateScript = clientLevel !== 'none'
-          ? `<script id="__NOOP_STATE__" type="application/json">${
-              JSON.stringify(result.state)
-                .replace(/</g, '\\u003C')
-                .replace(/>/g, '\\u003E')
-                .replace(/-->/g, '--\\>')
-            }</script>`
-          : '';
-        const bootstrap = generatePageBootstrap(result.state, clientLevel);
+        const page = await render(routeName, params);
+        const clientLevel: ClientLevel = page.clientLevel;
+        const pageTitle = page.pageTitle || 'HN Noop';
+
         const clientScript = (clientLevel === 'spa' || clientLevel === 'full')
           ? '<script type="module" src="/src/main.ts"></script>' : '';
-        const prefetchLinks = extractPrefetchLinks(result.html)
-          .map(href => `<link rel="prefetch" href="${href}">`)
-          .join('\n    ');
 
-        let html = template
-          .replace('<!--ssr-content-->', result.html)
-          .replace('</head>', prefetchLinks ? `  ${prefetchLinks}\n  </head>` : '</head>')
-          .replace('<!--client-script-->', clientScript)
-          .replace('</body>', stateScript + '\n' + bootstrap + '\n</body>');
-
-        // Set page title from response if provided
-        if (result.state.pageTitle) {
-          html = html.replace('<title>HN Noop</title>', `<title>${result.state.pageTitle}</title>`);
-        }
+        // Build head from template
+        let headHtml = '<meta charset="UTF-8" />\n  <meta name="viewport" content="width=device-width, initial-scale=1.0" />';
+        headHtml += `\n  <title>${pageTitle}</title>`;
+        headHtml += '\n  <script>(function(){var t=localStorage.getItem(\'hn-theme\')||\'light\';document.documentElement.setAttribute(\'data-theme\',t)})()</script>';
 
         const csp = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws: http://localhost:* https://hn.algolia.com; img-src 'self' https:; frame-src 'self' https:";
         res.writeHead(200, {
           'Content-Type': 'text/html',
           'Content-Security-Policy': csp,
+          'Transfer-Encoding': 'chunked',
         });
-        res.end(html);
+
+        // Stream shell immediately (head, open body + root)
+        res.write('<!DOCTYPE html>\n<html lang="en">\n<head>\n  ');
+        res.write(headHtml);
+        res.write('\n</head>\n<body>\n<div id="root">');
+
+        // Stream content via renderToStream — serializes incrementally
+        const { stream, state: statePromise } = renderToStream(page.component, page.props, { clientLevel });
+        const reader = stream.getReader();
+        const pump = async () => {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            res.write(value);
+          }
+        };
+        await pump();
+
+        // Get the serialized state from the stream result (matches the rendered HTML exactly)
+        const streamState = await statePromise;
+        const fullState = { ...streamState, pageTitle };
+        const stateJson = JSON.stringify(fullState)
+          .replace(/</g, '\\u003C')
+          .replace(/>/g, '\\u003E')
+          .replace(/-->/g, '--\\>');
+        const stateScript = clientLevel !== 'none'
+          ? `<script id="__NOOP_STATE__" type="application/json">${stateJson}</script>`
+          : '';
+        const bootstrap = generatePageBootstrap(fullState, clientLevel);
+
+        // Stream footer (close root div, scripts, close body/html)
+        res.write('</div>\n');
+        if (stateScript) res.write(stateScript + '\n');
+        if (bootstrap) res.write(bootstrap + '\n');
+        if (clientScript) res.write(clientScript + '\n');
+        res.write('</body>\n</html>');
+        res.end();
       } catch (err) {
         console.error('SSR error:', err);
         res.writeHead(500, { 'Content-Type': 'text/html' });

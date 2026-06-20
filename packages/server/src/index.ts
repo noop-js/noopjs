@@ -1,4 +1,4 @@
-export { ServerDocument, ServerElement, ServerTextNode } from './dom.js';
+export { ServerDocument, ServerElement, ServerTextNode, type StreamWriter } from './dom.js';
 export {
   renderToString,
   renderToStream,

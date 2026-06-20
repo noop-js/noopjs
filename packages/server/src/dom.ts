@@ -35,6 +35,10 @@ export class ServerTextNode {
   toHTML(): string {
     return escapeHtml(this._value);
   }
+
+  serialize(writer: StreamWriter): void {
+    writer.write(escapeHtml(this._value));
+  }
 }
 
 export class ServerComment {
@@ -51,6 +55,15 @@ export class ServerComment {
   toHTML(): string {
     return `<!--${this._value}-->`;
   }
+
+  serialize(writer: StreamWriter): void {
+    writer.write(`<!--${this._value}-->`);
+  }
+}
+
+export interface StreamWriter {
+  write(chunk: string): void;
+  flush(): void;
 }
 
 export class ServerElement {
@@ -61,6 +74,7 @@ export class ServerElement {
   parentNode: any = null;
   _noopNodeId: string | null = null;
   _isFragment: boolean = false;
+  _isFlushPoint: boolean = false;
   className: string = '';
   private _innerHTMLValue: string = '';
   _textContent: string = '';
@@ -190,6 +204,76 @@ export class ServerElement {
     return `<${tag}${this._attrs()}>${this._innerHTML()}</${tag}>`;
   }
 
+  /** Serialize to a stream, flushing after each child where appropriate.
+   *  For fragments, serialize inner children. For flush points, call writer.flush(). */
+  serialize(writer: StreamWriter): void {
+    if (this._isFlushPoint) {
+      writer.flush();
+      return;
+    }
+    if (this._isFragment) {
+      this._serializeChildren(writer);
+      return;
+    }
+
+    const tag = this.tagName.toLowerCase();
+
+    if (tag === 'html') {
+      writer.write('<!DOCTYPE html>\n<html');
+      writer.write(this._attrs());
+      writer.write('>');
+      this._serializeChildren(writer);
+      writer.write('</html>');
+      return;
+    }
+
+    if (isVoidElement(tag)) {
+      writer.write(`<${tag}${this._attrs()}>`);
+      return;
+    }
+
+    // Handle <textarea> value: emit as child text, not attribute
+    if (tag === 'textarea' && this.attributes.has('value')) {
+      const val = this.attributes.get('value')!;
+      this.attributes.delete('value');
+      this.children.push(new ServerTextNode(val));
+    }
+
+    writer.write(`<${tag}${this._attrs()}>`);
+    this._serializeChildren(writer);
+    writer.write(`</${tag}>`);
+  }
+
+  private _serializeChildren(writer: StreamWriter): void {
+    if (this._innerHTMLValue) {
+      writer.write(this._innerHTMLValue);
+      return;
+    }
+    if (this._textContent) {
+      writer.write(escapeHtml(this._textContent));
+      return;
+    }
+
+    // For <select>, set selected on matching <option> based on value attribute
+    if (this.tagName === 'SELECT' && this.attributes.has('value')) {
+      const selectValue = this.attributes.get('value')!;
+      for (const child of this.children) {
+        if (child instanceof ServerElement && child.tagName === 'OPTION') {
+          child.attributes.delete('selected');
+          if (child.attributes.get('value') === selectValue) {
+            child.attributes.set('selected', '');
+          }
+        }
+      }
+    }
+
+    for (const child of this.children) {
+      if (child instanceof ServerElement || child instanceof ServerTextNode || child instanceof ServerComment) {
+        child.serialize(writer);
+      }
+    }
+  }
+
   private _attrs(): string {
     const parts: string[] = [];
     if (this.className) {
@@ -261,6 +345,12 @@ export class ServerDocument {
 
   createComment(text: string): ServerComment {
     return new ServerComment(text);
+  }
+
+  createFlushPoint(): ServerElement {
+    const fp = new ServerElement('flush');
+    fp._isFlushPoint = true;
+    return fp;
   }
 
   get documentElement(): ServerElement {
