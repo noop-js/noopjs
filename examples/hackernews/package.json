@@ -19,6 +19,7 @@
     "vite": "^6.0.0"
   },
   "devDependencies": {
+    "@noopjs/eslint-plugin": "workspace:*",
     "tsx": "^4.0.0",
     "typescript": "^5.8.0"
   }
