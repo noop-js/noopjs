@@ -13,6 +13,7 @@
     "@noopjs/server": "workspace:*",
     "@noopjs/runtime": "workspace:*",
     "@noopjs/signals": "workspace:*",
+    "@noopjs/devtools": "workspace:*",
     "vite": "^6.0.0"
   },
   "devDependencies": {
