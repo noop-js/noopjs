@@ -76,6 +76,9 @@ export default defineConfig({
 | **SPA security** | mXSS-immune page swaps via per-render sentinel manifest. ~50 bytes. No DOMPurify. |
 | **Tailwind v4** | First-class token resolver. `token.spacing[6]` → `p-6`. |
 | **Custom Elements** | Export as native Web Components via `@noopjs customElement` directive. |
+| **Form helpers** | `useField()`, `<Form>`, validation — property-assigned, not `setAttribute`. ~100 lines. |
+| **DevTools** | Runtime bridge instruments all `signal()`/`effect()` calls. Floating panel (Cmd+Shift+N). |
+| **Streaming SSR** | `renderToStream()` emits content-first HTML. Chunked transfer encoding. |
 | **CLI** | `dev`, `build`, `generate`, `analyze`, `check`, `init`. |
 | **HMR** | Full hot module replacement in development. |
 
@@ -178,6 +181,52 @@ export default function Greeting(props) {
 
 No JSX at runtime. No framework imports. No VDOM. Just DOM.
 
+### Form Helpers
+
+A minimal form library built on signals. Property-assigned values (not `setAttribute`) — no friction with `<input value={...}>`.
+
+```tsx
+import { Form, useField } from '@noopjs/forms';
+
+export default function SearchPage() {
+  const query = useField('', {
+    validate: (v) => v.length > 0 ? null : 'Enter a query',
+  });
+  const results = signal([]);
+  const loading = signal(false);
+
+  function doSearch() {
+    if (query.validate()) return;
+    loading.set(true);
+    fetch('/api/search?q=' + encodeURIComponent(query.value.get()))
+      .then(r => r.json())
+      .then(r => { results.set(r); loading.set(false); });
+  }
+
+  return (
+    <div>
+      <Form onSubmit={doSearch}>
+        <input {...query.props} placeholder="Search..." />
+        {query.error.get() && <span>{query.error.get()}</span>}
+        <button>Search</button>
+      </Form>
+      {loading.get() && <p>Loading...</p>}
+    </div>
+  );
+}
+```
+
+| Returned by `useField` | Purpose |
+|---|---|
+| `value` | `Signal<string>` — read with `field.value.get()` |
+| `error` | `Signal<string \| null>` — validation error, set by `field.validate()` |
+| `props` | `{ value, onInput }` — spread onto `<input>`, `<textarea>`, `<select>` |
+| `set(v)` | Programmatically set the value |
+| `validate()` | Run the validation function, set `error` signal, return error or null |
+| `reset()` | Restore initial value and clear error |
+
+`<Form>` creates a `<form>` element with `preventDefault` on submit. Works in `client: spa` pages.
+
 ### Resumability (Not Hydration)
 
 Hydration runs a component on the client and diffs its output against server HTML — duplicate work. Resumption serializes the reactive graph and re-attaches it without running a single line of component code.
@@ -257,6 +306,7 @@ If the element lacks a `data-n` matching the manifest, it's removed. If its tag 
 | `@noopjs/client` | 1.1.0 | Client resumer — SSR hydration, SPA router, native prefetch |
 | `@noopjs/server` | 1.1.0 | SSR engine — `renderToString`, `renderToStream`, file-based routing, caching |
 | `@noopjs/vite` | 1.1.0 | Vite plugin — compiles `.noop.tsx`, extracts CSS, HMR, handler splitting |
+| `@noopjs/forms` | 1.0.0 | Form helpers — `useField()`, `<Form>`, validation |
 | `@noopjs/css` | 1.1.0 | Atomic CSS extractor — `extractStyles()` converts style objects to atomic classes |
 | `@noopjs/cli` | 1.1.0 | CLI — `dev`, `build`, `generate`, `analyze`, `check`, `init` |
 | `create-noopjs` | 1.1.0 | `npm create noopjs` — project scaffolding with templates |
@@ -290,15 +340,15 @@ The blog example demonstrates SSR + Tailwind v4 + NoopCSS + SPA navigation + laz
 - ✅ HMR / dev server
 - ✅ CLI
 
-### Layer 2 — Production (next)
+### Layer 2 — Production (in progress)
+- ✅ DevTools (runtime bridge + floating panel)
+- ✅ Streaming SSR (`renderToStream`, chunked encoding)
+- ✅ Form helpers (`useField`, `<Form>`, validation)
 - 🔲 Design-system libraries
 - 🔲 Image optimization
-- 🔲 Streaming SSR improvements
 - 🔲 i18n / l10n primitives
-- 🔲 Form helpers
 - 🔲 Performance budgets tooling
 - 🔲 ESLint plugin
-- 🔲 DevTools extension
 
 ### Layer 3 — Ecosystem (future)
 - 🔲 Noop Cloud (serverless edge SSR)
