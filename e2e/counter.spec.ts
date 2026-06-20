@@ -17,7 +17,7 @@ test.describe('Noop Counter SSR → Client Resumption', () => {
     await expect(page.locator('h1')).toHaveText('Noop Counter');
 
     // The count text should be rendered by SSR
-    await expect(page.locator('p')).toContainText('Count:0');
+    await expect(page.locator('p')).toContainText('Count: 0');
 
     // The button should have the event handler attribute
     const button = page.locator('button');
@@ -49,7 +49,7 @@ test.describe('Noop Counter SSR → Client Resumption', () => {
 
     // After clicking, the count should increment (signal-driven via resumer effect)
     // Note: the initial SSR text is "Count:0". After click, it becomes "Count:1"
-    await expect(page.locator('p')).toContainText('Count:1');
+    await expect(page.locator('p')).toContainText('Count: 1');
   });
 
   test('handler fires via delegated event', async ({ page }) => {
@@ -61,7 +61,7 @@ test.describe('Noop Counter SSR → Client Resumption', () => {
     await page.click('button');
     await page.click('button');
 
-    await expect(page.locator('p')).toContainText('Count:2');
+    await expect(page.locator('p')).toContainText('Count: 2');
   });
 
   test('atomic CSS classes are applied and survive after resume', async ({ page }) => {
@@ -74,7 +74,7 @@ test.describe('Noop Counter SSR → Client Resumption', () => {
 
     // Click to verify interaction still works with styled element
     await page.click('button');
-    await expect(page.locator('p')).toContainText('Count:1');
+    await expect(page.locator('p')).toContainText('Count: 1');
 
     // Class should still be present after state update
     const classAfter = await button.getAttribute('class');
@@ -88,6 +88,6 @@ test.describe('Noop Counter SSR → Client Resumption', () => {
     const button = page.locator('button');
     await button.click({ clickCount: 5 });
 
-    await expect(page.locator('p')).toContainText('Count:5');
+    await expect(page.locator('p')).toContainText('Count: 5');
   });
 });

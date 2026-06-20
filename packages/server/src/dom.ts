@@ -162,19 +162,35 @@ export class ServerElement {
 
   private _innerHTML(): string {
     if (this.innerHTML) return this.innerHTML;
+
+    // For <select>, set selected on the matching <option> based on the value attribute
+    if (this.tagName === 'SELECT' && this.attributes.has('value')) {
+      const selectValue = this.attributes.get('value')!;
+      for (const child of this.children) {
+        if (child instanceof ServerElement && child.tagName === 'OPTION') {
+          child.attributes.delete('selected');
+          if (child.attributes.get('value') === selectValue) {
+            child.attributes.set('selected', '');
+          }
+        }
+      }
+    }
+
     return this.children.map(c => c.toHTML()).join('');
   }
 }
 
 export class ServerDocument {
   body: ServerElement;
+  head: ServerElement;
   private _root: ServerElement;
   _sentinelHost: SentinelHost | null = null;
 
   constructor() {
     this._root = new ServerElement('html');
     this.body = new ServerElement('body');
-    this._root.appendChild(new ServerElement('head'));
+    this.head = new ServerElement('head');
+    this._root.appendChild(this.head);
     this._root.appendChild(this.body);
   }
 

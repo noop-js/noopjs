@@ -112,6 +112,8 @@ export function bindText(
 function setAttr(el: Element | any, attrName: string, val: string): void {
   if ((attrName === 'className' || attrName === 'class') && 'className' in el) {
     el.className = val;
+  } else if (attrName === 'value' && 'value' in el) {
+    el.value = val;
   } else {
     el.setAttribute(attrName, val);
   }
@@ -120,6 +122,8 @@ function setAttr(el: Element | any, attrName: string, val: string): void {
 function removeAttr(el: Element | any, attrName: string): void {
   if ((attrName === 'className' || attrName === 'class') && 'className' in el) {
     el.className = '';
+  } else if (attrName === 'value' && 'value' in el) {
+    el.value = '';
   } else {
     el.removeAttribute(attrName);
   }

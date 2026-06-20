@@ -470,6 +470,25 @@ function getJSXTagName(el: t.JSXOpeningElement): string {
   return '';
 }
 
+function normalizeJSXText(value: string, children: t.JSXElement['children'], childIndex: number): string | null {
+  const collapsed = value.replace(/\s+/g, ' ');
+  const trimmed = collapsed.trim();
+  if (trimmed) {
+    let text = trimmed;
+    const origStartsNewline = /^[\n\r]/.test(value);
+    const origEndsNewline = /[\n\r]$/.test(value);
+    if (!origStartsNewline && collapsed.startsWith(' ')) text = ' ' + text;
+    if (!origEndsNewline && collapsed.endsWith(' ')) text = text + ' ';
+    return text;
+  }
+  if (collapsed) {
+    const prevIsNonText = childIndex > 0 && !t.isJSXText(children[childIndex - 1]);
+    const nextIsNonText = childIndex < children.length - 1 && !t.isJSXText(children[childIndex + 1]);
+    if (prevIsNonText && nextIsNonText) return ' ';
+  }
+  return null;
+}
+
 function genJSXElement(el: t.JSXElement, depth: number): GenResult {
   const tagName = getJSXTagName(el.openingElement);
 
@@ -582,9 +601,10 @@ function genDomElement(el: t.JSXElement, tagName: string, depth: number): GenRes
   }
 
   // Children
-  for (const child of el.children) {
+  for (let ci = 0; ci < el.children.length; ci++) {
+    const child = el.children[ci];
     if (t.isJSXText(child)) {
-      const text = child.value.replace(/\s+/g, ' ').trim();
+      const text = normalizeJSXText(child.value, el.children, ci);
       if (text) {
         const tv = v('txt');
         lines.push(`${indent(depth)}const ${tv} = document.createTextNode(${JSON.stringify(text)});`);
@@ -612,9 +632,10 @@ function genJSXFragment(frag: t.JSXFragment, depth: number): GenResult {
 
   lines.push(`${indent(depth)}const ${fv} = document.createDocumentFragment();`);
 
-  for (const child of frag.children) {
+  for (let ci = 0; ci < frag.children.length; ci++) {
+    const child = frag.children[ci];
     if (t.isJSXText(child)) {
-      const text = child.value.replace(/\s+/g, ' ').trim();
+      const text = normalizeJSXText(child.value, frag.children, ci);
       if (text) {
         const tv = v('txt');
         lines.push(`${indent(depth)}const ${tv} = document.createTextNode(${JSON.stringify(text)});`);
@@ -710,14 +731,15 @@ interface ChildrenResult {
 }
 
 function genChildrenExpr(children: t.JSXElement['children'], depth: number): ChildrenResult | null {
-  const nonEmpty = children.filter(c => !(t.isJSXText(c) && !c.value.trim()));
+  const nonEmpty = children.filter((c, i) => !(t.isJSXText(c) && !normalizeJSXText(c.value, children, i)));
   if (nonEmpty.length === 0) return null;
 
   // Single child
   if (nonEmpty.length === 1) {
     const c = nonEmpty[0];
     if (t.isJSXText(c)) {
-      return { preCode: null, expression: JSON.stringify(c.value.trim()) };
+      const text = normalizeJSXText(c.value, children, children.indexOf(c)) || '';
+      return { preCode: null, expression: JSON.stringify(text) };
     }
     if (t.isJSXExpressionContainer(c)) {
       return { preCode: null, expression: generate(c.expression).code };
@@ -737,10 +759,13 @@ function genChildrenExpr(children: t.JSXElement['children'], depth: number): Chi
   const preLines: string[] = [];
   preLines.push(`${indent(depth)}const ${fv} = document.createDocumentFragment();`);
   for (const c of nonEmpty) {
-    if (t.isJSXText(c) && c.value.trim()) {
-      const tv = v('txt');
-      preLines.push(`${indent(depth)}const ${tv} = document.createTextNode(${JSON.stringify(c.value.trim())});`);
-      preLines.push(`${indent(depth)}${fv}.appendChild(${tv});`);
+    if (t.isJSXText(c)) {
+      const text = normalizeJSXText(c.value, children, children.indexOf(c));
+      if (text) {
+        const tv = v('txt');
+        preLines.push(`${indent(depth)}const ${tv} = document.createTextNode(${JSON.stringify(text)});`);
+        preLines.push(`${indent(depth)}${fv}.appendChild(${tv});`);
+      }
     } else if (t.isJSXExpressionContainer(c)) {
       const code = generate(c.expression).code;
       const tv = v('txt');

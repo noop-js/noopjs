@@ -236,7 +236,11 @@ export function generatePageBootstrap(
         lines.push(`__n.effect(function(){var p=document.querySelector('[data-noop-node="${binding.parentNodeId}"]');if(p&&p.childNodes[${binding.childIndex}]!=null)p.childNodes[${binding.childIndex}].nodeValue=String(${sigVar}.get())});`);
       }
     } else if (binding.type === 'attribute') {
-      lines.push(`__n.effect(function(){var el=document.querySelector('[data-noop-node="${binding.nodeId}"]');if(el){var v=${sigVar}.get();if(v==null)el.removeAttribute('${binding.attributeName}');else el.setAttribute('${binding.attributeName}',String(v))}});`);
+      if (binding.attributeName === 'value') {
+        lines.push(`__n.effect(function(){var el=document.querySelector('[data-noop-node="${binding.nodeId}"]');if(el){var v=${sigVar}.get();if(v==null||v==='')el.value='';else el.value=v}});`);
+      } else {
+        lines.push(`__n.effect(function(){var el=document.querySelector('[data-noop-node="${binding.nodeId}"]');if(el){var v=${sigVar}.get();if(v==null)el.removeAttribute('${binding.attributeName}');else el.setAttribute('${binding.attributeName}',String(v))}});`);
+      }
     }
   }
 
