@@ -35,6 +35,9 @@ importers:
       '@noopjs/compiler':
         specifier: workspace:*
         version: link:../../packages/compiler
+      '@noopjs/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@noopjs/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
@@ -69,6 +72,9 @@ importers:
       '@noopjs/client':
         specifier: workspace:*
         version: link:../../packages/client
+      '@noopjs/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@noopjs/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
@@ -100,6 +106,12 @@ importers:
       '@noopjs/compiler':
         specifier: workspace:*
         version: link:../../packages/compiler
+      '@noopjs/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
+      '@noopjs/forms':
+        specifier: workspace:*
+        version: link:../../packages/forms
       '@noopjs/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
@@ -268,6 +280,26 @@ importers:
       vitest:
         specifier: ^3.1.0
         version: 3.2.6(@types/node@22.19.21)(jiti@2.7.0)(jsdom@29.1.1)(lightningcss@1.32.0)(tsx@4.22.4)
+
+  packages/devtools:
+    dependencies:
+      '@noopjs/signals':
+        specifier: workspace:*
+        version: link:../signals
+    devDependencies:
+      typescript:
+        specifier: ^5.8.0
+        version: 5.9.3
+
+  packages/forms:
+    dependencies:
+      '@noopjs/signals':
+        specifier: workspace:*
+        version: link:../signals
+    devDependencies:
+      typescript:
+        specifier: ^5.8.0
+        version: 5.9.3
 
   packages/runtime:
     dependencies:

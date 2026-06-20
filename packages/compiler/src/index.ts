@@ -641,6 +641,8 @@ function genDomElement(el: t.JSXElement, tagName: string, depth: number): GenRes
         } else if (t.isStringLiteral(attr.value)) {
           if (isBooleanAttr(attrName)) {
             lines.push(`${indent(depth)}${ev}.${attrName} = ${JSON.stringify(attr.value.value)};`);
+          } else if (attrName === 'value') {
+            lines.push(`${indent(depth)}${ev}.value = ${JSON.stringify(attr.value.value)};`);
           } else {
             lines.push(`${indent(depth)}${ev}.setAttribute('${attrName}', ${JSON.stringify(attr.value.value)});`);
           }
@@ -657,6 +659,7 @@ function genDomElement(el: t.JSXElement, tagName: string, depth: number): GenRes
     const objCode = generate((spread as t.JSXSpreadAttribute).argument).code;
     lines.push(`${indent(depth)}for (const _k in ${objCode}) {`);
     lines.push(`${indent(depth + 1)}if (_k === 'className' || _k === 'class') ${ev}.className = ${objCode}[_k];`);
+    lines.push(`${indent(depth + 1)}else if (_k === 'value') ${ev}.value = ${objCode}[_k];`);
     lines.push(`${indent(depth + 1)}else ${ev}.setAttribute(_k, ${objCode}[_k]);`);
     lines.push(`${indent(depth)}}`);
   }
@@ -879,6 +882,8 @@ function genDynamicAttr(
         lines.push(`${indent(depth)}${ev}.className = ${code};`);
       } else if (isBool) {
         lines.push(`${indent(depth)}${ev}.${attrName} = !!(${code});`);
+      } else if (attrName === 'value') {
+        lines.push(`${indent(depth)}${ev}.value = ${code};`);
       } else {
         lines.push(`${indent(depth)}${ev}.setAttribute('${attrName}', ${code});`);
       }
@@ -1351,20 +1356,24 @@ function extractSignalRef(expr: t.Expression): string | null {
   if (
     t.isCallExpression(expr) &&
     t.isMemberExpression(expr.callee) &&
-    t.isIdentifier(expr.callee.object) &&
     t.isIdentifier(expr.callee.property) &&
     expr.callee.property.name === 'get'
   ) {
-    const objName = expr.callee.object.name;
-    if (signalVars.has(objName)) {
-      return objName;
+    // Handle X.get(), X.Y.get(), X.Y.Z.get() etc.
+    // For local signals created via signal(), the object is a simple identifier
+    // For wrapped signals (e.g., useField), the object is a property chain
+    const objCode = generate(expr.callee.object).code;
+    if (t.isIdentifier(expr.callee.object)) {
+      const objName = expr.callee.object.name;
+      if (signalVars.has(objName)) {
+        return objName;
+      }
+      if (importedNames.has(objName)) {
+        return `__module_signal:${objName}`;
+      }
     }
-    // Imported signals — use a distinct ref path so bootstrap can identify them
-    if (importedNames.has(objName)) {
-      return `__module_signal:${objName}`;
-    }
-    // Unknown .get() call — still treat as potentially reactive
-    return objName;
+    // Any .get() call — treat as reactive, use full object path as ref
+    return objCode;
   }
   return null;
 }

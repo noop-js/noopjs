@@ -90,6 +90,14 @@ export class ServerElement {
     this.children = [];
     this._innerHTMLValue = val;
   }
+
+  get value(): string {
+    return this.getAttribute('value') || '';
+  }
+
+  set value(val: string) {
+    this.setAttribute('value', val);
+  }
   _sentinelId: number = -1;
   _sentinelActive: boolean = false;
   _sentinelHost: SentinelHost | null = null;

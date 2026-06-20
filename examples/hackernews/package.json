@@ -15,6 +15,7 @@
     "@noopjs/signals": "workspace:*",
     "@noopjs/compiler": "workspace:*",
     "@noopjs/devtools": "workspace:*",
+    "@noopjs/forms": "workspace:*",
     "vite": "^6.0.0"
   },
   "devDependencies": {
