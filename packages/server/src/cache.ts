@@ -1,4 +1,4 @@
-import type { RenderResult } from './render';
+import type { RenderResult } from './render.js';
 
 interface CacheEntry {
   result: RenderResult;

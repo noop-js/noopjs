@@ -1,4 +1,4 @@
-import { renderToString, prefetchLinkTags, generatePageBootstrap, type ClientLevel } from './render';
+import { renderToString, prefetchLinkTags, generatePageBootstrap, type ClientLevel } from './render.js';
 import type { IncomingMessage, ServerResponse } from 'http';
 
 export interface NoopRequest {

@@ -1,5 +1,5 @@
-import { createSSRContext, enterSSR, exitSSR, getSerializedState } from './context';
-import type { SerializedState } from './context';
+import { createSSRContext, enterSSR, exitSSR, getSerializedState } from './context.js';
+import type { SerializedState } from './context.js';
 
 export type ClientLevel = 'none' | 'resume' | 'spa' | 'full';
 

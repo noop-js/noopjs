@@ -1,13 +1,13 @@
-export { ServerDocument, ServerElement, ServerTextNode } from './dom';
+export { ServerDocument, ServerElement, ServerTextNode } from './dom.js';
 export {
   renderToString,
   renderToStream,
   extractPrefetchLinks,
   prefetchLinkTags,
   generatePageBootstrap,
-} from './render';
+} from './render.js';
 
-export type { RenderResult, ClientLevel } from './render';
+export type { RenderResult, ClientLevel } from './render.js';
 
 export {
   createSSRContext,
@@ -15,6 +15,6 @@ export {
   exitSSR,
   getSerializedState,
   getPerformanceMetrics,
-} from './context';
-export type { SSRContext, SerializedState, BindingRecord, HandlerRecord } from './context';
-export { createNodeHandler, createExpressMiddleware } from './adapters';
+} from './context.js';
+export type { SSRContext, SerializedState, BindingRecord, HandlerRecord } from './context.js';
+export { createNodeHandler, createExpressMiddleware } from './adapters.js';

@@ -288,7 +288,11 @@ async function startDev() {
 
   const template = fs.readFileSync(path.resolve(root, 'index.html'), 'utf-8');
 
-  const { generatePageBootstrap, extractPrefetchLinks } = await import('@noopjs/server');
+  // Load @noopjs/server through Vite's SSR loader (not native import) so
+  // extensionless relative imports in its dist resolve correctly
+  const serverMod = await vite.ssrLoadModule('@noopjs/server');
+  const generatePageBootstrap = serverMod.generatePageBootstrap;
+  const extractPrefetchLinks = serverMod.extractPrefetchLinks;
 
   const http = await import('http');
   const server = http.createServer(async (req, res) => {

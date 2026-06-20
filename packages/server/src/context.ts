@@ -1,4 +1,4 @@
-import { ServerDocument, ServerElement, ServerTextNode } from './dom';
+import { ServerDocument, ServerElement, ServerTextNode } from './dom.js';
 
 export interface BindingRecord {
   nodeId: string;
