@@ -3,6 +3,7 @@ import { compile } from '@noopjs/compiler';
 import { extractStyles } from '@noopjs/css';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 const NOOP_FILE_PATTERN = /\.noop\.(tsx|ts)$/;
 const VIRTUAL_CSS_PREFIX = '\0noop-css:';
@@ -22,10 +23,13 @@ export interface NoopViteOptions {
   tokenResolvers?: import('@noopjs/compiler').TokenResolver[];
 }
 
+const DEVTOOLS_PROXY_PREFIX = '\0noop-devtools-signals';
+
 export function noopVite(options: NoopViteOptions = {}): Plugin {
   let config: ResolvedConfig;
   let server: ViteDevServer | undefined;
   const cssMap = new Map<string, string>();
+  let signalsPath: string = '';
 
   function cssVirtualId(realId: string): string {
     return VIRTUAL_CSS_PREFIX + realId.replace(NOOP_FILE_PATTERN, '.noop.css');
@@ -90,12 +94,16 @@ function vlqEncode(values: number[]): string {
   return result;
 }
 
+  // Dev mode: inject devtools import into .noop.tsx files and rewrite @noopjs/signals imports
+  let isDevMode = false;
+
   return {
     name: '@noopjs/vite',
     enforce: 'pre',
 
     configResolved(resolvedConfig) {
       config = resolvedConfig;
+      isDevMode = resolvedConfig.command === 'serve';
     },
 
     configureServer(devServer) {
@@ -136,6 +144,12 @@ function vlqEncode(values: number[]): string {
     resolveId(id: string, importer) {
       if (id.startsWith(VIRTUAL_CSS_PREFIX)) return id;
       if (id.startsWith(HANDLER_PREFIX)) return id;
+      // Dev mode: redirect @noopjs/signals to virtual proxy for instrumentation
+      // Exclude the devtools package itself from the redirect
+      if (isDevMode && id === '@noopjs/signals' && (!importer || !importer.includes('/devtools/'))) {
+        return DEVTOOLS_PROXY_PREFIX;
+      }
+      if (id === DEVTOOLS_PROXY_PREFIX) return id;
       if (id === '@noopjs/runtime' || id === '@noopjs/signals') return null;
 
       // Resolve virtual .noop.css imports from .noop.tsx files
@@ -164,6 +178,30 @@ function vlqEncode(values: number[]): string {
         if (code) return code;
         // Fallback: return a noop handler
         return 'export default function(e) {}';
+      }
+      // Dev mode: serve wrapped @noopjs/signals that instruments signal() and effect()
+      if (id === DEVTOOLS_PROXY_PREFIX) {
+        if (!signalsPath) {
+          // Find the real @noopjs/signals package relative to the vite plugin location
+          // vite/dist/index.js -> vite/ -> packages/ -> aether/ -> packages/signals/dist/index.js
+          const selfPath = fileURLToPath(import.meta.url);
+          const packagesDir = path.resolve(path.dirname(selfPath), '..', '..');
+          signalsPath = path.join(packagesDir, 'signals', 'dist', 'index.js');
+          if (!fs.existsSync(signalsPath)) {
+            // Fallback: try relative to cwd
+            signalsPath = path.resolve('node_modules', '@noopjs', 'signals', 'dist', 'index.js');
+          }
+        }
+        // Wrap signal() and effect() with instrumentation
+        // Re-export everything from the real module, but add instrumented signal/effect
+        const signalsFile = JSON.stringify(signalsPath);
+        const wrapped =
+          'import * as __noopDevtools from \'@noopjs/devtools\';\n' +
+          'export { computed, batch, untrack, readonly, flushPending, startBatch, endBatch } from ' + signalsFile + ';\n' +
+          'export { signal as __noopOrigSignal, effect as __noopOrigEffect } from ' + signalsFile + ';\n' +
+          'export function signal(v) { return __noopDevtools.signal(v); }\n' +
+          'export function effect(fn) { return __noopDevtools.effect(fn); }\n';
+        return wrapped;
       }
       return null;
     },
@@ -241,6 +279,11 @@ function vlqEncode(values: number[]): string {
               handlerCodeMap.set(h.id, `export default function(e) { ${h.code} }`);
             }
           }
+        }
+
+        // Dev mode: inject devtools side-effect import
+        if (isDevMode) {
+          compiled = prependImport(compiled, '@noopjs/devtools');
         }
 
         // Add HMR boundary
