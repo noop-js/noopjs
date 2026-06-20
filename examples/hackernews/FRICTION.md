@@ -37,7 +37,7 @@ Every wall hit while building a real-world app on NoopJS. Each entry describes t
 - **Context**: HN API returns HTML in story text, comment text, and user about sections.
 - **Problem**: During SSR, `innerHTML` on `ServerElement` stores a string that is emitted directly in `toHTML()`. No XSS risk since the server trusts its own output. During SPA navigation, the client re-renders and `innerHTML` is parsed by the browser, which is safe with sentinel-based mXSS protection.
 - **Workaround**: The `comment-body` class is used consistently. `innerHTML` works in both SSR and CSR but for different reasons (string emission vs DOM parsing).
-- **Status**: By design, but the asymmetry should be documented for security auditors.
+- **Status**: Layer 2 security feature (not Layer 1 bug). The SSR/CSR asymmetry is architecturally correct (different threat models), but **initial SSR page load** with untrusted user HTML is a genuine XSS gap — sentinel verification only protects SPA navigation. Fix with a server-side HTML sanitizer (DOMPurify + jsdom or pure-string). See [analysis](https://github.com/noop-js/noopjs/issues/new) for tracking.
 
 ### 7. Server DOM is incomplete — missing `textContent`, property reflection
 - **Context**: `StoryList` helper uses `link.textContent = s.title` and `link.href = s.url`.
@@ -73,13 +73,13 @@ Every wall hit while building a real-world app on NoopJS. Each entry describes t
 - **Context**: Any `{expr}` in JSX creates a text node that may be empty during SSR.
 - **Problem**: The compiled code creates `document.createTextNode('')` and then sets `nodeValue = expr`. This works but creates an extra empty text node during SSR. Harmless but slightly wasteful.
 - **Workaround**: Accepted as-is. The empty text node is replaced during `toHTML()` since `escapeHtml('')` returns `''`.
-- **Status**: Minor. Could use `createTextNode(String(expr))` inline but would lose the pattern of separate node creation and value setting.
+- **Status**: Won't fix. Empty text nodes produce zero bytes in HTML output (`escapeHtml('')` → `''`). Micro-optimization with no user-visible impact — compiler complexity not worth the gain.
 
 ### 13. CSS `data-theme` attribute not set during SSR for theme-default pages
 - **Context**: Non-theme pages like `/about` and `/404` use `ThemeToggle` but the `data-theme` attribute is set via an `effect()` in `theme.ts`.
 - **Problem**: The effect runs during SSR only if `theme.ts` is loaded after `enterSSR()`. Since `theme.ts` is loaded at import time (before `enterSSR`), the effect doesn't run during SSR for these pages.
 - **Workaround**: The `data-theme` attribute is set in the browser by the inline bootstrap or the SPA module. During SSR, the default theme value is used for text rendering (user doesn't see the theme until JS loads).
-- **Status**: Acceptable for MVP. Future: inject `<script>` that sets `data-theme` from localStorage before paint.
+- **Status**: Fixed. Added blocking inline `<script>` in `<head>` (index.html:6) that reads `localStorage.getItem('hn-theme')` and sets `document.documentElement.setAttribute('data-theme', t)` before paint. ~130 bytes, synchronous, runs before any rendering — zero flash. Standard pattern used by Next.js, Astro, SvelteKit, Nuxt. Future Layer 2: `@noopjs/theme` package to auto-inject this.
 
 ---
 
@@ -91,7 +91,8 @@ Every wall hit while building a real-world app on NoopJS. Each entry describes t
 | Module state pattern | 2, 3 |
 | Handler serialization | 4 |
 | Recursive components | 5 |
-| User HTML rendering | 6 |
-| Server DOM | 7, 10, 12 |
+| User HTML rendering (Layer 2) | 6 |
+| Server DOM | 7, 10 |
 | Client level model | 9 |
-| SSR timing | 13 |
+| SSR timing (fixed) | 13 |
+| Won't fix | 12 |
