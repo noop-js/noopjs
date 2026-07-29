@@ -90,6 +90,7 @@ describe('cacheRender', () => {
       html: '<div>cached</div>',
       state: { signals: {}, bindings: [], handlers: {}, rootId: 'c0' },
       componentId: 'c0',
+      clientLevel: 'spa' as const,
     }));
 
     const result1 = cacheRender({ key: 'ttl-test', ttl: 10000 }, renderFn);
@@ -107,6 +108,7 @@ describe('cacheRender', () => {
       html: '<div>fresh</div>',
       state: { signals: {}, bindings: [], handlers: {}, rootId: 'c0' },
       componentId: 'c0',
+      clientLevel: 'spa' as const,
     }));
 
     cacheRender({ key: 'expire-test', ttl: 1000 }, renderFn);
@@ -136,6 +138,7 @@ describe('invalidateCache', () => {
       html: '<div>hi</div>',
       state: { signals: {}, bindings: [], handlers: {}, rootId: 'c0' },
       componentId: 'c0',
+      clientLevel: 'spa' as const,
     }));
 
     cacheRender({ key: 'invalidate-test', ttl: 10000 }, renderFn);

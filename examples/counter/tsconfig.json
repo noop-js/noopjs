@@ -3,19 +3,18 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "noEmit": true,
-    "jsx": "preserve"
+    "jsx": "preserve",
+    "noEmit": true
   },
   "include": [
-    "packages/*/src/**/*.ts",
-    "packages/*/tests/**/*.ts"
-  ],
-  "exclude": [
-    "packages/create-noopjs/src/templates"
+    "src",
+    "server.ts",
+    "vite.config.ts"
   ]
 }

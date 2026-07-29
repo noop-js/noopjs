@@ -10,7 +10,7 @@ import http from 'http';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const routeMap: Record<string, (params: Record<string, string>) => string | null> = {
+const routeMap: Record<string, (params: Record<string, string>) => string> = {
   '/': () => 'index',
   '/blog': () => 'blog-index',
 };

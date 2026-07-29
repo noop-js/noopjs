@@ -1,6 +1,6 @@
 export const rule = {
   meta: {
-    type: 'suggestion',
+    type: 'suggestion' as const,
     docs: {
       description:
         'Disallow dynamic DOM operations in client: resume components. Resume components cannot create or remove DOM nodes dynamically after SSR.',

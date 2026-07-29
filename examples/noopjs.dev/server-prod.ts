@@ -9,7 +9,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const distDir = resolve(__dirname, 'dist');
 const template = readFileSync(resolve(__dirname, 'index.html'), 'utf-8');
 
-const routeMap: Record<string, (params: Record<string, string>) => string | null> = {
+const routeMap: Record<string, (params: Record<string, string>) => string> = {
   '/': () => 'index',
   '/blog': () => 'blog-index',
 };

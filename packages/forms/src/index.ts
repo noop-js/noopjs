@@ -42,7 +42,7 @@ export function useField(initialValue: string = '', options?: UseFieldOptions): 
 
 export interface FormProps {
   onSubmit: () => void;
-  children: any;
+  children?: any;
   style?: string;
   className?: string;
 }

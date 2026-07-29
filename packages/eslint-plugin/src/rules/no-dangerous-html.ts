@@ -1,6 +1,6 @@
 export const rule = {
   meta: {
-    type: 'suggestion',
+    type: 'suggestion' as const,
     docs: {
       description:
         'Warn on dangerouslySetInnerHTML with non-literal values. Static string values are safe; dynamic values may expose the application to XSS attacks.',

@@ -49,7 +49,7 @@ export async function render(routeName: string, params: Record<string, string>):
     case 'search': {
       const searchMod = await import('./routes/search.noop');
       return {
-        component: () => searchMod.default({}),
+        component: () => searchMod.default(),
         props: {},
         clientLevel: (searchMod.default as any).clientLevel || 'resume',
         pageTitle: 'Search — HN Noop',

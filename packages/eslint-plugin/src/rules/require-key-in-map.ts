@@ -1,6 +1,6 @@
 export const rule = {
   meta: {
-    type: 'suggestion',
+    type: 'suggestion' as const,
     docs: {
       description:
         'Require key prop when rendering lists with .map() in JSX. Without a key, NoopJS falls back to unkeyed reconciliation which can cause unnecessary DOM churn.',

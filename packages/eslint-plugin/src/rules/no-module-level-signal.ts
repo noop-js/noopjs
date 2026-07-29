@@ -1,6 +1,6 @@
 export const rule = {
   meta: {
-    type: 'problem',
+    type: 'problem' as const,
     docs: {
       description: 'Disallow signal() calls outside component functions',
       recommended: true,
